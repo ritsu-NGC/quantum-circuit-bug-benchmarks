@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "repository": "Qiskit/qiskit",
+  "retrieved_at": "2026-10-30T17:28:03+00:00",
+  "issue": {
+    "number": 86,
+    "title": "Bug in cu3 implementation",
+    "html_url": "https://github.com/Qiskit/qiskit/issues/86",
+    "body": "<!--- Provide a general summary of the issue in the Title above -->\r\n\r\ncu3(pi, 0, pi) gate should work as controlled X gate, but it is not.\r\n\r\n## Expected Behavior\r\n<!--- If you're describing a bug, tell us what should happen -->\r\n<!--- If you're suggesting a change/improvement, tell us how it should work -->\r\n\r\ncx: (1, 0) ---> (0, 1)\r\ncu3(pi, 0, pi) : (1, 0) ---> (0, 1)\r\n\r\n## Current Behavior\r\n<!--- If describing a bug, tell us what happens instead of the expected behavior -->\r\n<!--- If suggesting a change/improvement, explain the difference from current behavior -->\r\n\r\ncx: (1, 0) ---> (0, 1)\r\ncu3(pi, 0, pi) : (1, 0) ---> (0, -i)\r\n\r\n## Steps to Reproduce (for bugs)\r\n<!--- Provide a link to a live example, or an unambiguous set of steps to -->\r\n<!--- reproduce this bug. Include code to reproduce, if relevant -->\r\n```\r\nimport numpy as np\r\n\r\nsys.path.append(\"../qiskit-sdk-py/\")\r\n\r\nfrom qiskit import QuantumProgram\r\nimport Qconfig\r\n\r\nnp.set_printoptions(precision=2)\r\n\r\nQ_program = QuantumProgram()\r\nn = 2\r\nq = Q_program.create_quantum_register('q', n)\r\nc = Q_program.create_classical_register('c', n)\r\n  \r\nstate = Q_program.create_circuit('bug', [q], [c])\r\n\r\nstate.x(q[0])\r\nstate.cx(q[0], q[1])\r\n\r\nstate.measure(q[1], c[1])\r\n\r\nbackend = 'local_qasm_simulator'\r\nresult = Q_program.execute(['bug'], backend=backend, shots=1, silent = True)\r\nprint(\"Controlled X gate:\")\r\nprint(result.get_data('bug')['quantum_state'])\r\n\r\nprint(\"\")\r\n\r\n\r\nQ_program = QuantumProgram()\r\nn = 2\r\nq = Q_program.create_quantum_register('q', n)\r\nc = Q_program.create_classical_register('c', n)\r\n  \r\nstate = Q_program.create_circuit('bug', [q], [c])\r\n\r\nstate.x(q[0])\r\nstate.cu3(np.pi, 0.0, np.pi, q[0], q[1])\r\n\r\nstate.measure(q[1], c[1])\r\n\r\nbackend = 'local_qasm_simulator'\r\nresult = Q_program.execute(['bug'], backend=backend, shots=1, silent = True)\r\nprint(\"CU3(pi, 0, pi) gate:\")\r\nprint(result.get_data('bug')['quantum_state'])\r\n```\r\n\r\nAbove code prints out\r\n\r\n```\r\nControlled X gate:\r\n[ 0.+0.j  0.+0.j  0.+0.j  1.+0.j]\r\n\r\nCU3(pi, 0, pi) gate:\r\n[  0.00e+00+0.j   0.00e+00+0.j   0.00e+00+0.j   6.12e-17-1.j]\r\n```\r\n\r\n## Your Environment\r\n<!--- Include as many relevant details about the environment you experienced the bug in -->\r\n* Version used: 0.3.5\r\n* Environment name and version (e.g. Python 3.6.1): Python 3.6.2\r\n* Operating System and version: OSX",
+    "state": "closed",
+    "state_reason": "completed",
+    "created_at": "2017-09-26T21:31:05Z",
+    "updated_at": "2017-09-27T05:30:08Z",
+    "closed_at": "2017-09-27T04:38:17Z",
+    "author": "yoonbo"
+  },
+  "comments": [
+    {
+      "id": 332378296,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/86#issuecomment-332378296",
+      "body": "Hi,  \r\n\r\nBut, essentially the state \r\n`[ 0.+0.j  0.+0.j  0.+0.j  1.+0.j]` and the state \r\n`[  0.00e+00+0.j   0.00e+00+0.j   0.00e+00+0.j   6.12e-17-1.j]` \r\nare the same up to global phase `-j`. I have confirmed that the `cu3` with target `1` results in essentially the same state with `cx` up to the global phase `-j`. \r\n\r\nPlease refer to: \r\nhttps://en.wikipedia.org/wiki/Quantum_state\r\n```... A unit vector is usually picked, but its phase factor can be chosen freely anyway. Nevertheless, such factors are important when state vectors are added together to form a superposition.```",
+      "created_at": "2017-09-27T01:02:01Z",
+      "updated_at": "2017-09-27T01:03:59Z",
+      "author": "rraymondhp"
+    },
+    {
+      "id": 332406713,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/86#issuecomment-332406713",
+      "body": "@yoonbo and @rraymondhp this is correct. It is not a bug it is just a global phase that quantum computers can't be see. I suggest if you look at |<psi_expected|psi_made>|^2 and if this is one then the states are the same. ",
+      "created_at": "2017-09-27T04:38:17Z",
+      "updated_at": "2017-09-27T04:38:17Z",
+      "author": "jaygambetta"
+    },
+    {
+      "id": 332413062,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/86#issuecomment-332413062",
+      "body": "Thanks. I also wrote about the global phase equivalence of `u3` gate in the tutorial below:\r\nhttps://nbviewer.jupyter.org/github/QISKit/qiskit-tutorial/blob/master/1_introduction/quantum_gates_and_linear_algebra.ipynb\r\n\r\n",
+      "created_at": "2017-09-27T05:30:08Z",
+      "updated_at": "2017-09-27T05:30:08Z",
+      "author": "rraymondhp"
+    }
+  ],
+  "state_events": [
+    {
+      "event": "closed",
+      "created_at": "2017-09-27T04:38:17Z",
+      "commit_id": null,
+      "commit_url": null,
+      "actor": "jaygambetta"
+    }
+  ],
+  "integrity": {
+    "body_sha256": "814b1ba6fe45935bbe69f099e9431e0a9225f35968d6dd7adae9fe1502bd3616",
+    "comment_body_sha256": {
+      "332378296": "27a15f77c11b67fd26ceb8ae99bac2c0e65fc14b258dcb6b6aca6bd4d042ee9c",
+      "332406713": "b47ae7449d4892b1a13896fb982a13b21d7e1900f94f5194cc02a81151a96049",
+      "332413062": "f53b2e3758f626a559016c6a314de09d5f44b109618506d8e3698db1d576bf28"
+    },
+    "expected_comment_count": 3
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "repository": "Qiskit/qiskit",
+  "retrieved_at": "2026-10-30T17:28:03+00:00",
+  "issue": {
+    "number": 11954,
+    "title": "qasm3 returns wrong results with pauli evolution gate",
+    "html_url": "https://github.com/Qiskit/qiskit/issues/11954",
+    "body": "When trying to turn this circuit into a qasm3 : \r\n\r\n```\r\nfrom qiskit.circuit import QuantumCircuit, ParameterVector\r\nfrom qiskit.circuit.library import PauliEvolutionGate\r\nfrom qiskit.quantum_info import SparsePauliOp\r\nfrom qiskit.qasm3 import dumps, loads, dump, load\r\n\r\nt = ParameterVector(\"t\", 3)\r\nX, Y, Z = SparsePauliOp(\"X\"), SparsePauliOp(\"Y\"), SparsePauliOp(\"Z\")\r\nop1, op2, op3 = (X^X), (Y^Y), (Z^Z)\r\nevo1 = PauliEvolutionGate(op1, time=t[0])\r\nevo2 = PauliEvolutionGate(op2, time=t[1])\r\nevo3 = PauliEvolutionGate(op3, time=t[2])\r\n \r\ndec0 = QuantumCircuit(2)\r\ndec0.append(evo1, range(2))\r\ndec0.append(evo2, range(2))\r\ndec0.append(evo3, range(2))\r\ndec0.count_ops() #returns OrderedDict([('PauliEvolution', 3)])\r\n```\r\n\r\nafter dumping into a qasm3, we would expect the qasm to have 3 different gates for the XX, YY, ZZ but it only looks into the first Pauli evolution gate and repeats it 3 times : \r\n\r\n```\r\nq0 = dumps(dec0)\r\nprint(q0)\r\n#returns \r\nOPENQASM 3.0;\r\ninclude \"stdgates.inc\";\r\ninput float[64] _t_0_;\r\ninput float[64] _t_1_;\r\ninput float[64] _t_2_;\r\ngate rxx_4948547280(_t_0_) _gate_q_0, _gate_q_1 {\r\n  h _gate_q_0;\r\n  h _gate_q_1;\r\n  cx _gate_q_0, _gate_q_1;\r\n  rz(2.0*_t_0_) _gate_q_1;\r\n  cx _gate_q_0, _gate_q_1;\r\n  h _gate_q_1;\r\n  h _gate_q_0;\r\n}\r\ngate PauliEvolution(_t_0_) _gate_q_0, _gate_q_1 {\r\n  rxx_4948547280(2.0*_t_0_) _gate_q_0, _gate_q_1;\r\n}\r\nqubit[2] q;\r\nPauliEvolution(_t_0_) q[0], q[1];\r\nPauliEvolution(_t_1_) q[0], q[1];\r\nPauliEvolution(_t_2_) q[0], q[1];\r\n```\r\n",
+    "state": "closed",
+    "state_reason": "completed",
+    "created_at": "2024-03-06T08:49:00Z",
+    "updated_at": "2024-07-22T14:23:10Z",
+    "closed_at": "2024-07-22T14:23:10Z",
+    "author": "LenaPer"
+  },
+  "comments": [
+    {
+      "id": 2018501508,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/11954#issuecomment-2018501508",
+      "body": "It looks like the same problem as in https://github.com/Qiskit/qiskit/issues/7335 but the workaround doesn't work for this specific example. It might be because the op doesn't appear in the name or in the parameters and fall through the cracks of the fix.\r\n```\r\nprint(evo1.params, evo1.name)\r\n# returns [ParameterVectorElement(t[0])] PauliEvolution\r\n```",
+      "created_at": "2024-03-25T17:12:47Z",
+      "updated_at": "2024-03-25T17:12:47Z",
+      "author": "LenaPer"
+    },
+    {
+      "id": 2034861821,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/11954#issuecomment-2034861821",
+      "body": "Thanks for the report.  It looks like the OpenQASM 3 exporter still maintains a lot of the same problems that the OpenQASM 2 exporter used to have until we fixed a whole load of them in #9953 - this kind of duplicate definition / bad definition reuse / whatever used to be rife in the old one as well.  I'm not sure of a timespan for when we'll get this entirely fixed, but I think such a fix will tie into the implementation of #10737, since to handle exporting against multiple possible library files, we'll need to rethink how we do the definition decomposition quite heavily.",
+      "created_at": "2024-04-03T15:00:34Z",
+      "updated_at": "2024-04-03T15:00:34Z",
+      "author": "jakelishman"
+    },
+    {
+      "id": 2230684051,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/11954#issuecomment-2230684051",
+      "body": "This should be fixed by #12776 for `PauliEvolutionGate`.",
+      "created_at": "2024-07-16T11:42:59Z",
+      "updated_at": "2024-07-16T11:42:59Z",
+      "author": "jakelishman"
+    }
+  ],
+  "state_events": [
+    {
+      "event": "closed",
+      "created_at": "2024-07-22T14:23:10Z",
+      "commit_id": null,
+      "commit_url": null,
+      "actor": "ElePT"
+    }
+  ],
+  "integrity": {
+    "body_sha256": "fc14fdc702bf3b15815ba7a38460ce9fbbcbd24d2c1f17cca34aac63c4b251ce",
+    "comment_body_sha256": {
+      "2018501508": "d2ceac3b1287b08a754a7c5d04d0ed878326a4d993dfa43e783bb3aa13c8769a",
+      "2034861821": "4b7fdce1bf8b3b40e44384ebdf85b1b02025dbb18bf728ae03902522029c4315",
+      "2230684051": "e8131b066769f1cb55f72eb7ae7ebcefddc0492c450a093bab29553d600ddd35"
+    },
+    "expected_comment_count": 3
+  }
+}

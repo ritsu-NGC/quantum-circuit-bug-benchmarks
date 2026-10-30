@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "repository": "Qiskit/qiskit",
+  "retrieved_at": "2026-10-30T17:28:03+00:00",
+  "issue": {
+    "number": 12694,
+    "title": "Wrong export/import of OpenQASM2 with custom Unitary",
+    "html_url": "https://github.com/Qiskit/qiskit/issues/12694",
+    "body": "### Environment\n\n- **Qiskit version**: Version: 1.1.0\r\n- **Python version**: 3.9.5\r\n- **Operating system**: Windows 10 Professional\r\n\n\n### What is happening?\n\nWhen we use the method `unitary` on a QuantumCircuit to define a custom gate from a unitary matrix for instance, and when we try to export the circuit to OpenQASM2 code using  `qasm2.dumps(qc)`, the custom gate we obtain in OpenQASM2 is not exactly corresponding to the unitary we passed as input. Either sometimes there is an additional phase, or the operations are wrong (sometimes i observe that if I take the inverse of the unitary, I get something looking like the right result).\r\n\r\nAlso sometimes when I use simple native gates like `u` in the openQASM code, and try to reconstruct a circuit from it, it tells me that \"QASM2ParseError: \"<input>:3,18: 'u' is not defined in this scope\"\".\n\n### How can we reproduce the issue?\n\n```Python\r\nfrom qiskit import *\r\nimport qiskit\r\nimport numpy as np\r\nfrom qiskit import qasm2\r\n\r\nmatrix = np.array([[0,1], [1,0]])\r\n\r\nqc = QuantumCircuit(1)\r\nqc.unitary(matrix, 0)\r\nprint(qc)\r\nqasm_str = qasm2.dumps(qc)\r\nprint(qasm_str)\r\n\r\nqc2 = qiskit.qasm2.loads(qasm_str)\r\nprint(qc2.qasm())\r\n\r\nmatrix = np.array([[0,0,1,0],[1,0,0,0],[0,1,0,0],[0,0,0,1]])\r\nprint(matrix)\r\n\r\nqc3 = QuantumCircuit(2)\r\nqc3.unitary(matrix, [0,1])\r\nprint(qc3)\r\nqasm_str = qasm2.dumps(qc3)\r\nprint(qasm_str)\r\n\r\ndef u(a,b,c):\r\n    cc = np.cos(a/2)\r\n    ss = np.sin(a/2)\r\n    return np.array([[np.exp(-1j*(b+c)/2)*cc,\r\n                     -np.exp(-1j*(b-c)/2)*ss],\r\n                     [np.exp(1j*(b-c)/2)*ss,\r\n                     np.exp(1j*(b+c)/2)*cc]])\r\n\r\ndef cnot():\r\n    return np.array([[1,0,0,0], [0,1,0,0], [0,0,0,1], [0,0,1,0]])\r\n\r\npi = np.pi\r\ndecomp_matrix = np.kron(u(pi/2,pi/2,pi/2), u(1.4512678518986026,pi/2,pi/2)).dot(cnot().dot(np.kron(u(pi/2,-pi,-pi/2),u(1.6894679218926363,0.014320349886192574,-1.4504171294224655)).dot(cnot().dot(np.kron(u(pi/2,pi/2,0),u(1.4512678518986009,pi/2,-pi))))))\r\nprint(np.round(decomp_matrix))\r\nprint(np.round(decomp_matrix.transpose()))\r\nprint(np.round(decomp_matrix.transpose())-matrix)\r\n```\n\n### What should happen?\n\nA correct OpenQASM2 code should be exported that can be used on other devices wthout error, en respecting the OpenQASM2 synthax.\r\n\r\nThe possiblity to load OpenQASM2 code that contains native gate that are indeed included in qelib1.inc\n\n### Any suggestions?\n\n_No response_",
+    "state": "open",
+    "state_reason": null,
+    "created_at": "2024-06-30T10:21:44Z",
+    "updated_at": "2024-07-23T15:29:41Z",
+    "closed_at": null,
+    "author": "hJaffaliColibritd"
+  },
+  "comments": [
+    {
+      "id": 2198579280,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/12694#issuecomment-2198579280",
+      "body": "OpenQASM 2 as a language is only defined up to a global phase; there's no way to represent the precise global phase in it, so Qiskit will output a decomposition of the gate that is correct up to an undefined global phase.\r\n\r\nI note that in your `cnot` function, you are using a different bit-labelling and/or Kronecker-product convention to Qiskit (compare `np.array(qiskit.circuit.library.CXGate())`, for example).  I haven't checked, but that could well be the discrepancy you are seeing. \r\n\r\nIn OpenQASM 2, `u` is actually not in `qelib1.inc`, though due to a long-standing bug, Qiskit's OpenQASM 2 exporter hallucinates it as being there, which then causes problems with `qasm2.loads` (see #12124).  More immediately, you can do\r\n```python\r\nfrom qiskit import qasm2\r\n\r\nqc = qasm2.loads(qasm_str, custom_instructions=qasm2.LEGACY_CUSTOM_INSTRUCTIONS)\r\n```",
+      "created_at": "2024-06-30T14:21:57Z",
+      "updated_at": "2024-06-30T14:21:57Z",
+      "author": "jakelishman"
+    },
+    {
+      "id": 2200178184,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/12694#issuecomment-2200178184",
+      "body": "Thank for the answer. Concerning the ordering of the qubits and the matrix you're right, I was doing it in the reversed order.\r\n\r\nConcerning the global phase error, this is quite annoying, because I need to provide an exact state vector, and having any additional global phase can lead to mistakes if this gate is then controlled later. \r\nThere is a way to define the global phase in OpenQASM2 by using a succession of `p` (phase shift) and `y` (pauli) instructions, but to do this I need to know exactly what the error/difference in terms of phase that the decomposition algorithm does when transforming unitary into a succession of native gates. \r\n\r\nFor instance, even for a simple gate like the X gate, it introduces a global phase of -1. Is this due to the fact that you are mixiing several definitions of U/u in the decomposition ? ",
+      "created_at": "2024-07-01T13:34:24Z",
+      "updated_at": "2024-07-01T13:35:12Z",
+      "author": "hJaffaliColibritd"
+    },
+    {
+      "id": 2200368141,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/12694#issuecomment-2200368141",
+      "body": "OpenQASM 2 was never intended to represent global phase faithfully; you'll see that in things like the `qelib1.inc` header where `p` and `rz` have the exact same definition - we'll end up with inconsistent mathematics if we try to respect the standard phase difference between those while trying to treat other gates as having well-defined global phase.\r\n\r\nOpenQASM 2 isn't really a suitable serialisation format for unitaries that might later be controlled because of this.  The language was only intended for complete programs, for which global phase is unobservable.  Qiskit (and other software) often uses this - since we can't faithfully represent the global phase in an output, nor assume what the user intended from an input, we just don't - we'd probably end up putting out unsound/inconsistent code if we tried.\r\n\r\nFor X: we don't commit to any particular decomposition of gates for output to OpenQASM 2, just that all decompositions will be correct up to a global phase on the operation.  Within Qiskit's transpiler we track global phase explicitly through all decompositions, though, so if you're after something that'll definitely work in OpenQASM 2 and has a known global phase, you can do\r\n```python\r\nfrom qiskit import tranpsile, QuantumCircuit\r\n\r\nqc = QuantumCircuit(...)\r\n# ... build the circuit ...\r\n\r\nqc2 = transpile(qc, basis_gates=[\"u\", \"cx\"])\r\n```\r\nthen the output `qc2` will have a `global_phase` attribute that's well defined and will contain only the basis gates of the OpenQASM 2 language.",
+      "created_at": "2024-07-01T14:49:44Z",
+      "updated_at": "2024-07-01T14:49:44Z",
+      "author": "jakelishman"
+    },
+    {
+      "id": 2245514271,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/12694#issuecomment-2245514271",
+      "body": "Can we close this one as _discussion solved_?",
+      "created_at": "2024-07-23T15:08:28Z",
+      "updated_at": "2024-07-23T15:08:28Z",
+      "author": "1ucian0"
+    },
+    {
+      "id": 2245557587,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/12694#issuecomment-2245557587",
+      "body": "I actually found that the decomposition of a `unitary` and the export to QASM2 not only sometimes involve an additional global phase that doesn't change the sampling results, but that it can lead to totally wrong results, more important than just a phase difference.\r\n\r\nIndeed, what is happening is that we add the unitary in the `QuantumCircuit` directly. When we export to OpenQASM2, the unitary is transpiled by means of 'u' and 'cx' gates. However, here, the 'u' gate is the usual unitary 'U' operator, that follows the definition given in OpenQASM3 (not phase in front of the top left cos(\\theta) in the matrix).\r\n\r\nWhen the export is done in OpenQASM2, the keyword 'u' is used without taking into account that there is a phase between the OpenQASM3 (and the `QuantumCircuit`) 'U', and the OpenQASM2 one. Here appears the extra phase at the one-qubit level.\r\nHowever, if the unitary is a multi-qubit unitary, 'cx' gates may appear on the way when decomposed. The phase will propagate and will affect other qubits, resulting in a much more important error than the previous one. \r\n\r\nOne our user side, we found a work-around to this problem, which is to manually correct the global phase after each one-qubit 'u' before applying any control gate. We cannot use the `GlobalPhaseGate` of Qiskit because it is not supported by the OpenQAM2 exporter, so we use the trick of applying a succession of single qubit phase and Pauli-Y gates.\r\n\r\nOne solution from the dev side, is to take into account that the `U` present in the QuantumCircuit is not the same `U` as the one manipulated in OpenQASM2, and then to do an extra effort either to decompose the circuit with the right 'u' definition, or to correct the local phases so they don't propagate.\r\n\r\nHere is an example of work-around code in the context of our MPQP library : https://github.com/ColibrITD-SAS/mpqp/\r\n\r\n```python\r\nfrom qiskit import qasm2, transpile, QuantumCircuit\r\nfrom qiskit.circuit import CircuitInstruction\r\n\r\ndef apply_gphase(circuit: QuantumCircuit, global_phase: float, qubit: int) -> None:\r\n\t\"\"\"\r\n\tApply a global phase to a given circuit by appending the right sequence of Phase and Y gates on the qubit\r\n\tgiven in parameter.\r\n\r\n\tArgs:\r\n\t\tcircuit: QuantumCircuit to which we want to add the global phase.\r\n\t\tglobal_phase: Global phase g parametrizing the global phase `e^{i \\times g}` to add.\r\n\t\tqubit: Index of the qubit on which the sequence of gates will be applied.\r\n\r\n\t\"\"\"\r\n\t# circuit.append(GlobalPhaseGate(-global_phase)) --> We cannot use it because OQASM2 doesn't not support\r\n\tcircuit.p(global_phase, qubit)\r\n\tcircuit.y(qubit)\r\n\tcircuit.p(global_phase, qubit)\r\n\tcircuit.y(qubit)\r\n\r\ndef replace_custom_gate(custom_unitary: CircuitInstruction, nb_qubits: int) -> QuantumCircuit:\r\n\t\"\"\"\r\n\tDecompose and replace the (custom) qiskit unitary given in parameter by a ``QuantumCircuit`` composed of\r\n\t``U`` and ``CX`` gates, with the global phase (related to usage of ``u`` in OpenQASM2) corrected.\r\n\r\n\tArgs:\r\n\t\tcustom_unitary: Qiskit CircuitInstruction containing the custom unitary operator.\r\n\t\tnb_qubits: Number of qubits of the circuit from which the unitary instruction was taken.\r\n\r\n\tReturns:\r\n\t\tQuantumCircuit containing the decomposition of the unitary in terms of native gates ``U`` and ``CX``,\r\n\t\twith a correction in the global phase of each ``U`` operator.\r\n\t\"\"\"\r\n\ttranspilation_circuit = QuantumCircuit(nb_qubits)\r\n\ttranspilation_circuit.append(custom_unitary)\r\n\ttranspiled = transpile(transpilation_circuit, basis_gates=['u', 'cx'])\r\n\treplace_circuit = QuantumCircuit(nb_qubits)\r\n\tfor instr in transpiled.data:\r\n\t\treplace_circuit.append(instr)\r\n\t\tif instr.operation.name == 'u':\r\n\t\t\tphi = instr.operation.params[1]\r\n\t\t\tgamma = instr.operation.params[2]\r\n\t\t\tapply_gphase(replace_circuit, -(phi+gamma)/2, instr.qubits[0]._index)\r\n\treturn replace_circuit\r\n\r\nqiskit_circ = # The circuit containing some custom unitaries\r\n\r\nnew_circuit = QuantumCircuit(qiskit_circ.num_qubits, qiskit_circ.num_clbits)\r\nfor instruction in qiskit_circ.data:\r\n\tif instruction.operation.name == 'unitary':\r\n\t\tnew_circuit.compose(replace_custom_gate(instruction, qiskit_circ.num_qubits), inplace=True)\r\n\telse:\r\n\t\tnew_circuit.append(instruction)\r\n\r\nqasm_str = qasm2.dumps(new_circuit)\r\n```",
+      "created_at": "2024-07-23T15:25:52Z",
+      "updated_at": "2024-07-23T15:29:41Z",
+      "author": "hJaffaliColibritd"
+    }
+  ],
+  "state_events": [],
+  "integrity": {
+    "body_sha256": "620c07cbb59c098b193ee1e10b78f7d41968d7c50a498b55a4ff12e0d9589ae5",
+    "comment_body_sha256": {
+      "2198579280": "f5ff459fbd4466ff694a3362fd0bae6127327ab42ea83724257034b9ed696313",
+      "2200178184": "449e322f0185c961a8f8bf746bc441ff9de59c02feea9189dc9b5d7229917cf4",
+      "2200368141": "c2a45fa3d8f29f3047c3deaf6a77572a80dd1abfaef2b9b13280139df56702ce",
+      "2245514271": "3f78d982c5110c71b774e6d9e03642e47c6fc5526e457642cb9b5caef58540ff",
+      "2245557587": "93e8ad4244d6ed9f2ecc4902b69f270ad07e53b6f3bd7adf2b8e4c417fa9ebdd"
+    },
+    "expected_comment_count": 5
+  }
+}

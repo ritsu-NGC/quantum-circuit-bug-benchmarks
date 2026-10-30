@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "repository": "Qiskit/qiskit",
+  "retrieved_at": "2026-10-30T17:28:03+00:00",
+  "issue": {
+    "number": 9327,
+    "title": "Approximate quantum compiler (AQC) returns a wrong circuit when the unitary has a determinant −1",
+    "html_url": "https://github.com/Qiskit/qiskit/issues/9327",
+    "body": "### Environment\n\n- **Qiskit Terra version**: 0.22.3\r\n- **Python version**: 3.9.5\r\n- **Operating system**: Windows 10\r\n\n\n### What is happening?\n\nWhen the approximate quantum compiler (AQC) is used to synthesis a unitary which has a determinant −1 (e.g., an \"odd parity\" permutation matrix), a warning message is displayed:\r\n```\r\n[...]synthesis\\aqc\\aqc.py:83: RuntimeWarning: invalid value encountered in power\r\n  su_matrix = target_matrix / np.power(target_det, (1 / matrix_dim))\r\n```\r\nthen it continues its work and generates a circuit. The unitary of the generated circuit, however, is not an approximation to the original one.\r\n\n\n### How can we reproduce the issue?\n\n```python\r\nunitary = np.ndarray(shape=(8, 8), buffer=np.array([\r\n    [0, 1, 0, 0, 0, 0, 0, 0],\r\n    [0, 0, 0, 1, 0, 0, 0, 0],\r\n    [0, 0, 1, 0, 0, 0, 0, 0],\r\n    [0, 0, 0, 0, 1, 0, 0, 0],\r\n    [1, 0, 0, 0, 0, 0, 0, 0],\r\n    [0, 0, 0, 0, 0, 1, 0, 0],\r\n    [0, 0, 0, 0, 0, 0, 1, 0],\r\n    [0, 0, 0, 0, 0, 0, 0, 1],\r\n], dtype=int), dtype=int)\r\n\r\nnum_qubits = 3\r\n\r\ncnots = make_cnot_network(num_qubits = num_qubits, network_layout = 'spin', connectivity_type = 'full', depth = 0)\r\n\r\noptimizer = L_BFGS_B()\r\naqc = AQC(optimizer)\r\napproximate_circuit = CNOTUnitCircuit(num_qubits=num_qubits, cnots=cnots)\r\napproximating_objective = DefaultCNOTUnitObjective(num_qubits=num_qubits, cnots=cnots)\r\n\r\naqc.compile_unitary(\r\n    target_matrix=unitary,\r\n    approximate_circuit=approximate_circuit,\r\n    approximating_objective=approximating_objective,\r\n)\r\n\r\napprox_matrix = Operator(approximate_circuit).data\r\nerror = 0.5 * (np.linalg.norm(approx_matrix - unitary, \"fro\") ** 2)\r\n\r\nprint(error)\r\narray_to_latex(approx_matrix)\r\n```\n\n### What should happen?\n\nThe code must take this case into account\n\n### Any suggestions?\n\nThe root cause of this wrong behavior is this line of code:\r\n```\r\nsu_matrix = target_matrix / np.power(target_det, (1 / matrix_dim))\r\n```\r\nAs per numpy.power documentation:\r\n\r\n> Negative values raised to a non-integral value will return `nan`. To get complex results, cast the input to `complex`.\r\n\r\nThe issue can be simply fixed by replacing this line with:\r\n```\r\nsu_matrix = target_matrix / np.power(target_det, (1 / matrix_dim), dtype=complex)\r\n```\r\n",
+    "state": "closed",
+    "state_reason": "completed",
+    "created_at": "2022-12-28T09:05:53Z",
+    "updated_at": "2023-01-13T21:38:32Z",
+    "closed_at": "2023-01-13T21:38:32Z",
+    "author": "EgrettaThula"
+  },
+  "comments": [
+    {
+      "id": 1366840705,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/9327#issuecomment-1366840705",
+      "body": "Thanks @EgrettaThula for finding this bug, would you like to make a PR to implement your suggestion? You would just have to make the change you suggest, and add a test case.",
+      "created_at": "2022-12-28T18:26:49Z",
+      "updated_at": "2022-12-28T18:26:49Z",
+      "author": "ajavadia"
+    },
+    {
+      "id": 1367919879,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/9327#issuecomment-1367919879",
+      "body": "I'll work on it.",
+      "created_at": "2022-12-30T13:26:46Z",
+      "updated_at": "2022-12-30T13:26:46Z",
+      "author": "EgrettaThula"
+    }
+  ],
+  "state_events": [
+    {
+      "event": "closed",
+      "created_at": "2023-01-13T21:38:33Z",
+      "commit_id": null,
+      "commit_url": null,
+      "actor": "mergify[bot]"
+    }
+  ],
+  "integrity": {
+    "body_sha256": "ae7602635c9cbf64640fe7829742f52c3fcb5f58f08845941e226a4c8a1f46e0",
+    "comment_body_sha256": {
+      "1366840705": "afc41171021c8a8947bf0d6bd0ce39b491353487500a5af63b595273bcaea772",
+      "1367919879": "d4d35978388db6b7b795e7ff3755ee4df9086ed332ea0d616195e5b4eb030877"
+    },
+    "expected_comment_count": 2
+  }
+}

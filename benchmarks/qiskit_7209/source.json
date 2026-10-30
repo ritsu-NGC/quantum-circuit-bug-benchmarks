@@ -1,0 +1,115 @@
+{
+  "schema_version": 1,
+  "repository": "Qiskit/qiskit",
+  "retrieved_at": "2026-10-30T17:28:03+00:00",
+  "issue": {
+    "number": 7209,
+    "title": "`C3SXGate` inconsistent with `SXGate`",
+    "html_url": "https://github.com/Qiskit/qiskit/issues/7209",
+    "body": "<!-- ⚠️ If you do not respect this template, your issue will be closed -->\r\n<!-- ⚠️ Make sure to browse the opened and closed issues -->\r\n\r\n### Information\r\n\r\n- **Qiskit Terra version**: 0.18.3\r\n- **Python version**: any\r\n- **Operating system**: any\r\n\r\n### What is the current behavior?\r\n\r\nThe definition of `C3SXGate()` is currently equivalent to `SXdgGate.control(3)`, but its name and its base gate definition indicate it should be equivalent to `SXgate.control(3)`.\r\n\r\n\r\n### Steps to reproduce the problem\r\n\r\n```python\r\nIn [1]: from qiskit.circuit.library import SXGate, SXdgGate, C3SXGate\r\n   ...: from qiskit.quantum_info import Operator\r\n   ...: import numpy as np\r\n   ...:\r\n   ...: (\r\n   ...:     np.linalg.norm(Operator(SXGate().control(3)) - Operator(C3SXGate())),\r\n   ...:     np.linalg.norm(Operator(SXdgGate().control(3)) - Operator(C3SXGate())),\r\n   ...: )\r\nOut[1]: (1.9999999999999984, 6.088839805355096e-15)\r\n```\r\n\r\n### What is the expected behavior?\r\n\r\n`C3SXGate` should be consistent with `SXGate().control(3)`.\r\n\r\n\r\n### Suggested solutions\r\n\r\nSwap the negatives of the angles in `C3SXGate.definition`.  There's a fair amount more to do as well to ensure consistency - checking the equivalence library, QASM definitions, etc.",
+    "state": "closed",
+    "state_reason": "completed",
+    "created_at": "2021-11-02T12:27:31Z",
+    "updated_at": "2021-11-15T14:34:03Z",
+    "closed_at": "2021-11-09T14:28:37Z",
+    "author": "jakelishman"
+  },
+  "comments": [
+    {
+      "id": 960243576,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/7209#issuecomment-960243576",
+      "body": "I have taken a look at it and it seems flipping the angles makes it work. I have tested the equivalence among these two comparing a circuit in which a C3SX gate was added with the SXGate with control, it passes the equivalence decomposition. What else is required for consistency? ",
+      "created_at": "2021-11-03T22:27:34Z",
+      "updated_at": "2021-11-03T22:27:34Z",
+      "author": "wahaj"
+    },
+    {
+      "id": 960660000,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/7209#issuecomment-960660000",
+      "body": "The test suite doesn't pass if all you do is flip the angles in the `C3SXGate` class, because the `C4XGate` class depends on it for its definition, and there's also a redefinition in the QASM 2 library file `qelib1.inc` (and a `c4x` in there too).  Everything needs to stay consistent if one gate changes.  There don't appear to be any defined equivalences in the equivalence library, so that part's not a problem.\r\n\r\nHowever, I'm not even sure if the change is correct - I don't know if there's context as to why the `C3SXGate` disagrees with `SXGate.control(3)`; there might be a reason for the redefinition.  After all, this form of `C3SXGate` applied twice still does produce a `C3XGate`, so in a vacuum, it's not entirely wrong.\r\n\r\nPerhaps @Cryoris knows more - the gate was added in #5668.",
+      "created_at": "2021-11-04T11:14:19Z",
+      "updated_at": "2021-11-04T11:14:19Z",
+      "author": "jakelishman"
+    },
+    {
+      "id": 961263441,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/7209#issuecomment-961263441",
+      "body": "Well, maybe the problem isn't in the `C3SXGate` class, because it is defined using the decomposition that is theoretically correct. Since the `C4XGate` also works fine using it as a base, maybe the problem isn't in the `C3SXGate` class, but rather there may be something funky going on in the `control` method of the `SXGate` class, with problems popping up with more than 2 units of control. Since the `C4XGate` and the `XGate` with 4 control bits is equivalent, maybe the phase transition could be changed in the `SXGate` to accomodate that.\r\n\r\nAny thoughts on this ?",
+      "created_at": "2021-11-04T17:30:35Z",
+      "updated_at": "2021-11-04T17:30:35Z",
+      "author": "wahaj"
+    },
+    {
+      "id": 961299237,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/7209#issuecomment-961299237",
+      "body": "The control method is fine - it just defers to the standard `Gate.control` decomposition, and you can just see in the tensor-product structure of the output matrix that it's correct in this simple case.  If you construct the controlled gate matrix with `np.kron`, it's clear:\r\n```python\r\nIn [1]: import qiskit\r\n   ...: import numpy as np\r\n   ...:\r\n   ...: np.set_printoptions(suppress=True)  # suppress very small values in prints\r\n   ...:\r\n   ...: sx = np.array(qiskit.circuit.library.SXGate())\r\n   ...: control_state = np.array([0]*7 + [1])  # control on |111>\r\n   ...: i3 = np.eye(8)\r\n   ...: proj = np.outer(control_state.conj(), control_state)\r\n   ...: np.kron(np.eye(2), i3 - proj) + np.kron(sx, proj)\r\nOut[1]:\r\narray([[1. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j ],\r\n       [0. +0.j , 1. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j ],\r\n       [0. +0.j , 0. +0.j , 1. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j ],\r\n       [0. +0.j , 0. +0.j , 0. +0.j , 1. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j ],\r\n       [0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 1. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j ],\r\n       [0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 1. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j ],\r\n       [0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 1. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j ],\r\n       [0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0.5+0.5j, 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0.5-0.5j],\r\n       [0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 1. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j ],\r\n       [0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 1. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j ],\r\n       [0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 1. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j ],\r\n       [0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 1. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j ],\r\n       [0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 1. +0.j , 0. +0.j , 0. +0.j , 0. +0.j ],\r\n       [0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 1. +0.j , 0. +0.j , 0. +0.j ],\r\n       [0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 1. +0.j , 0. +0.j ],\r\n       [0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0.5-0.5j, 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0. +0.j , 0.5+0.5j]])\r\n\r\nIn [2]: np.array(qiskit.quantum_info.Operator(qiskit.circuit.library.C3SXGate()))\r\nOut[2]:\r\narray([[ 1. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ],\r\n       [ 0. +0.j ,  1. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ],\r\n       [ 0. +0.j ,  0. +0.j ,  1. -0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j , -0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ],\r\n       [ 0. +0.j ,  0. +0.j ,  0. +0.j ,  1. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. -0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ],\r\n       [ 0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  1. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j , -0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ],\r\n       [ 0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  1. -0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ],\r\n       [ 0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  1. -0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j , -0. +0.j ,  0. +0.j ],\r\n       [ 0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0.5-0.5j,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0.5+0.5j],\r\n       [ 0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  1. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ],\r\n       [ 0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  1. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ],\r\n       [ 0. +0.j ,  0. +0.j , -0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  1. -0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ],\r\n       [ 0. +0.j ,  0. +0.j ,  0. +0.j ,  0. -0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  1. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ],\r\n       [ 0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j , -0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  1. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ],\r\n       [ 0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  1. -0.j ,  0. +0.j ,  0. +0.j ],\r\n       [ 0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j , -0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  1. -0.j ,  0. +0.j ],\r\n       [ 0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0.5+0.5j,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0. +0.j ,  0.5-0.5j]])\r\n```\r\n\r\nThe problem is that `C3SXGate` is giving exactly the same matrix as `SXdgGate` with 3 controls, not `SXGate`.  This is a naming convention issue, to some degree - both `SXGate` and `SXdgGate` _could_ have been called SX, because applying either twice gets you an X, just like how either 1 or -1 is the square root of 1.  The issue is the inconsistency between the two.\r\n\r\nWhy do you say the current decomposition is theoretically correct?  It's producing the wrong result here, at least by the name of the class.",
+      "created_at": "2021-11-04T18:15:58Z",
+      "updated_at": "2021-11-04T18:15:58Z",
+      "author": "jakelishman"
+    },
+    {
+      "id": 961564465,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/7209#issuecomment-961564465",
+      "body": "Well because it is defined according to the method described in [ Barenco et al., 1995.](https://arxiv.org/pdf/quant-ph/9503016.pdf) in \r\n\r\n> 7. n-bit networks. \r\n\r\nBut looking closer, the decomposition is supposed to start and end with a _positive_ phase in the paper as opposed to starting and ending with the _negative_ phase (**pi/8**) I guess but you can have a look ",
+      "created_at": "2021-11-05T01:48:24Z",
+      "updated_at": "2021-11-05T01:48:24Z",
+      "author": "wahaj"
+    },
+    {
+      "id": 961679023,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/7209#issuecomment-961679023",
+      "body": "I think @wahaj is right, the decomposition in Qiskit has the wrong sign. The decomposition uses \r\n<img width=\"746\" alt=\"image\" src=\"https://user-images.githubusercontent.com/5978796/140473391-5c0a0be9-be97-41e8-a207-66fca52b43d2.png\">\r\n\r\nwhere `V` should be `H P(pi/8) H`, since then `V^4` equals the square root of X. Instead in the code it uses `P(-pi/8)`. \r\n\r\nIf we fix that, we can also directly remove the deprecated `angle` keyword argument 🙂 ",
+      "created_at": "2021-11-05T07:26:53Z",
+      "updated_at": "2021-11-05T07:26:53Z",
+      "author": "Cryoris"
+    },
+    {
+      "id": 961830823,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/7209#issuecomment-961830823",
+      "body": "I actually found this as part of trying to remove the `angle` keyword!  Still, though - if we remove the `angle` keyword, we won't have an efficient representation for `C3SXGate().inverse()` any more (though we can always just put in a `C3SdgXGate` in theory).\r\n\r\nI think we're actually on the same page here - flipping the angles is the same as the replacement for `V` that you're talking about, and that's what I meant by the decomposition being incorrect.\r\n\r\nI think the decomposition of `C4XGate` may be wrong in a related manner - it produces the correct result, but since it depends on `C3SXGate` with an incorrect phase convention, its decomposition is likely wrong as well, but just in a way that happens to cancel out.  For example, if I do `Operator(C4XGate().definition)` on the current `main`, it produces the correct result.  However, if I swap the phases of `C3SXGate` over, like discussed, then `Operator(C4XGate().definition)` gives me the identity matrix.  We then also need to swap the phases in the `CU1Gate` instances of `C4XGate` to make it work.\r\n\r\nI've PR'd a fix in #7230.",
+      "created_at": "2021-11-05T11:48:03Z",
+      "updated_at": "2021-11-05T11:48:03Z",
+      "author": "jakelishman"
+    },
+    {
+      "id": 961838264,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/7209#issuecomment-961838264",
+      "body": "Good question for the inverse but maybe the default inverse is actually good enough since that should just invert every gate which should do nothing but inverting the angle.",
+      "created_at": "2021-11-05T12:01:48Z",
+      "updated_at": "2021-11-05T12:01:48Z",
+      "author": "Cryoris"
+    },
+    {
+      "id": 961842610,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/7209#issuecomment-961842610",
+      "body": "We'll need to redefine its `inverse` method to dodge `ControlledGate`'s `inverse` which will mess everything up, but otherwise, yeah, it should work.  I suppose it'll invert the order of the gates as well, but that's no big deal.",
+      "created_at": "2021-11-05T12:09:29Z",
+      "updated_at": "2021-11-05T12:09:29Z",
+      "author": "jakelishman"
+    }
+  ],
+  "state_events": [
+    {
+      "event": "closed",
+      "created_at": "2021-11-09T14:28:37Z",
+      "commit_id": null,
+      "commit_url": null,
+      "actor": "mergify[bot]"
+    }
+  ],
+  "integrity": {
+    "body_sha256": "3711328b314da4c77494fb1fa7e801a1a3cf92e1ce522de1a96cb9ed8284fb10",
+    "comment_body_sha256": {
+      "960243576": "3d1871e48ef717381a16e826a3baf295a7453e77a5f17af74cea6fd4fbf0899f",
+      "960660000": "187f6093530fb560483de3718468755d8a43105cf3f4f06c0f772f94cbf584f9",
+      "961263441": "27619661ef7b0be882d1a452a11885282f09a60a2a3caf0650dfff6cd0f9de97",
+      "961299237": "f5daa963c1571fdb98faceb4581aaa1780ef8a2f2c1187f0634ba2576e6fb29e",
+      "961564465": "2abb202644250932c4ff24e571c5a846dfc7a65f0f194fd3f47b858fe29fd8f1",
+      "961679023": "bae0c028d913031707dcff434e879a0e315f92774edbd0ab8ddc7a186c3c5974",
+      "961830823": "47ccafff931482c74595c1c8e08f1d9fba3151250b76996603b6786f8982a96f",
+      "961838264": "ae1382d60a1a05195281cbfb18b7dcc4e75b127a6057bd33ba3c5b108f2f5c50",
+      "961842610": "c693d0409062b2b19a0a3eb7f085c497c58cac7491c6326fdfb141eeb5f199b4"
+    },
+    "expected_comment_count": 9
+  }
+}

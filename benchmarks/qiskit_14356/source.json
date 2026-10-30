@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "repository": "Qiskit/qiskit",
+  "retrieved_at": "2026-10-30T17:28:03+00:00",
+  "issue": {
+    "number": 14356,
+    "title": "HoareOptimizer incorrectly optimizes unitary gates",
+    "html_url": "https://github.com/Qiskit/qiskit/issues/14356",
+    "body": "### Environment\n\n- **Qiskit version**: 2.0.0\n- **Python version**: 3.12.9\n- **Operating system**: Ubuntu 22.04.1 LTS\n\n\n### What is happening?\n\nWhen using HoareOptimizer to optimize the following circuit, the output is incorrect.\n```\nfrom qiskit import QuantumCircuit\n\nqc1 = QuantumCircuit(4, 1)\nqc1.h(3)\n\nqc2 = QuantumCircuit(4)\nqc2.cx(0, 1)\nqc2.cx(0, 2)\nqc2.cx(0, 3)\nqc2.h(3)\nqc1.append(qc2, range(4), []) # circuit-158\n\nqc3 = QuantumCircuit(4, 1)\nqc1.append(qc3, range(4), range(1)) # circuit-161\n\nqc1.measure_all()\n```\nThe actual optimized circuit output:\n\n![Image](https://github.com/user-attachments/assets/0ad4d3af-dac0-4d6c-9243-aabc107ff644)\n\nHowever, the expected optimized output should be an empty circuit.\n\n**Optimization Analysis**\n\nIn the `_traverse_dag` function, HoareOptimizer records the following gatecache:\n```\nq0: circuit-158, circuit-161, barrier, measure\nq1: circuit-158, circuit-161, barrier, measure\nq2: circuit-158, circuit-161, barrier, measure\nq3: h, circuit-158, circuit-161, barrier, measure\n```\nThen HoareOptimizer attempts to remove identity blocks by calling `_remove_successive_identity` three times:\n\nFor q3: node1 = h, node2 = circuit-158\nTargets differ, so skip.\n\nFor q0: node1 = circuit-158, node2 = circuit-161\nHoareOptimizer checks node1 == node2 and returns True since both are Instruction instances, even though their internal semantics differ. As a result, it incorrectly removes both nodes.\n\nFor q0 again: node1 = barrier, node2 = measure\nTargets differ, so skip.\n\n### How can we reproduce the issue?\n\nCreate the above circuit and compare circuits before and after optimized:\n```\nfrom qiskit_aer import AerSimulator\nbackend = AerSimulator()\ntrans_qc = transpile(qc1, optimization_level=0, backend=backend)\nprint(trans_qc)  // This will display a correct circuit.\n\npm = PassManager()\npm.append(HoareOptimizer(size=2))\nopt_qc = pm.run(qc1)\nprint(opt_qc) // This will display an incorrect circuit.\n```\n\n### What should happen?\n\nThe optimizer should either:\n+ Successfully simplify the circuit to an empty circuit, or\n+ Retain the original circuit if it cannot prove semantic identity.\n\n### Any suggestions?\n\nA possible fix is to decompose composite instructions (like `qc2` and `qc3`) into their base gates before comparison, to ensure proper semantic checking of identity.",
+    "state": "open",
+    "state_reason": null,
+    "created_at": "2025-05-13T15:12:30Z",
+    "updated_at": "2025-05-18T08:44:21Z",
+    "closed_at": null,
+    "author": "ryanscott111"
+  },
+  "comments": [
+    {
+      "id": 2888861756,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/14356#issuecomment-2888861756",
+      "body": "Thanks for detecting and investigating the problem @ryanscott111 . As `HoareOptimizer` is not a part of Qiskit's default transpilation pipeline even with optimization level 3, it's significantly less tested than other transpiler passes and thus could have other bugs. In fact, as far as I know, #13165 has not been addressed either, and if I recall correctly also stemmed from some problems in the caching mechanism. Would one of these two issues be something you would be interested in investigating further and potentially submitting a fix?\n\nI have not thought too deeply about this, but I don't think we should enforce running the decomposition pass prior to running `HoareOptimizer`, the optimizer should not make invalid reductions even in the presence of custom gates, subcircuits, etc. Though I do agree that to get the most benefit of the pass, we should probably run the `HighLevelSynthesis` pass (aka the decomposition pass) before `HoareOptimizer`.\n\n",
+      "created_at": "2025-05-18T08:44:20Z",
+      "updated_at": "2025-05-18T08:44:20Z",
+      "author": "alexanderivrii"
+    }
+  ],
+  "state_events": [],
+  "integrity": {
+    "body_sha256": "d19161a82bfa53b350f00d5a9ed2ea5f51e58a4aa18975d9e4eb821629e551fa",
+    "comment_body_sha256": {
+      "2888861756": "7f23026ae9515c5d65f5a9e8b1dc67b5dd5ef8edb94ee0a3dcb21aac6beb2c2f"
+    },
+    "expected_comment_count": 1
+  }
+}

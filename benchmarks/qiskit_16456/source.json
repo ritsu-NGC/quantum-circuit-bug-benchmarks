@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "repository": "Qiskit/qiskit",
+  "retrieved_at": "2026-10-30T17:28:03+00:00",
+  "issue": {
+    "number": 16456,
+    "title": "`Commuting2qBlock` loses parameters from parametric gates",
+    "html_url": "https://github.com/Qiskit/qiskit/issues/16456",
+    "body": "### Environment\n\n- **Qiskit version**: main branch \n- **Python version**: 3.10+\n\n### What is happening?\n\n`Commuting2qBlock` loses all parameters from input parametric gates because `params` is hardcoded to an empty list in `__init__`\n\n\n### How can we reproduce the issue?\n\n```python\nfrom qiskit import QuantumCircuit\nfrom qiskit.circuit import Parameter\nfrom qiskit.converters import circuit_to_dag\nfrom qiskit.transpiler.passes.routing.commuting_2q_gate_routing.commuting_2q_block import Commuting2qBlock\n\n# Create parametric circuit\nqc = QuantumCircuit(3)\nc_0 = Parameter('c_0')\nc_1 = Parameter('c_1')\nqc.rzz(c_0, 0, 1)\nqc.rzz(c_1, 1, 2)\n\n# Create block\ndag = circuit_to_dag(qc)\nnodes = list(dag.topological_op_nodes())\nblock = Commuting2qBlock(nodes)\n\nprint(f\"Circuit parameters: {qc.parameters}\")  # Shows c_0, c_1\nprint(f\"Block parameters: {block.params}\")     # Shows []\n\n```\n\n### What should happen?\n\n`block.params` should contain `[Parameter('c_0'), Parameter('c_1')]`\n\n### Any suggestions?\n\nThe bug is in commuting_2q_block.py line 53 where params=[] is hardcoded. The fix should extract parameters from gate operations and handle ParameterExpression objects.",
+    "state": "closed",
+    "state_reason": "completed",
+    "created_at": "2026-06-21T13:01:26Z",
+    "updated_at": "2026-07-07T12:42:44Z",
+    "closed_at": "2026-07-07T12:42:44Z",
+    "author": "TalKozlovski"
+  },
+  "comments": [
+    {
+      "id": 4762132487,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/16456#issuecomment-4762132487",
+      "body": "Hi @TalKozlovski - thanks for reporting this bug, would you like to open a PR to fix it?",
+      "created_at": "2026-06-21T13:30:28Z",
+      "updated_at": "2026-06-21T13:30:28Z",
+      "author": "ShellyGarion"
+    }
+  ],
+  "state_events": [
+    {
+      "event": "closed",
+      "created_at": "2026-07-07T12:42:44Z",
+      "commit_id": null,
+      "commit_url": null,
+      "actor": "Cryoris"
+    }
+  ],
+  "integrity": {
+    "body_sha256": "774d839af88400dded5e9ab18d4fb120bbdbccf875da63e3bee1b045f257705e",
+    "comment_body_sha256": {
+      "4762132487": "4346cf05f808b55e7e2cb6dc905a7a99a452799dd8dc0f00109ef5c6531f87e5"
+    },
+    "expected_comment_count": 1
+  }
+}

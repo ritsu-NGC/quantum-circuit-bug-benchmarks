@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "repository": "Qiskit/qiskit",
+  "retrieved_at": "2026-10-30T17:28:03+00:00",
+  "issue": {
+    "number": 16377,
+    "title": "`CommutativeCancellation` incorrectly adds spurious global phase to P/U1 gates accumulating to 2π",
+    "html_url": "https://github.com/Qiskit/qiskit/issues/16377",
+    "body": "### Environment\n\n- **Qiskit version**: 2.4.1\n- **Python version**: 3.13.13 \n- **Operating system**: macOS\n\n\n### What is happening?\n\nWhen `transpiling` a circuit at `optimization_level=2` or `3`, the `CommutativeCancellation` pass silently alters the unitary operator of the circuit if commuting Z-rotations accumulate to `2π` and the pass selects PhaseGate (P) or U1Gate as the target gate. The compiler assumes all Z-axis rotations behave like the RZ gate where $RZ(2\\pi) = -I$, and blindly subtracts a π phase to compensate. However, for Phase and U1 gates, $P(2\\pi) = I$. Subtracting a π phase here results in an unwarranted $-I$ operator shift, breaking unitary equivalence (which escalates into a catastrophic local phase error if the circuit is later controlled).\n\n### How can we reproduce the issue?\n\n```python\nimport numpy as np\nfrom qiskit import QuantumCircuit, transpile\nfrom qiskit.quantum_info import Operator\n\nqc = QuantumCircuit(1)\nqc.p(np.pi/4, 0)\nfor _ in range(7):\n    qc.t(0)\n\nprint(f\"Global Phase: {float(qc.global_phase):.4f}\")\nprint(\"Operator Matrix:\")\nprint(Operator(qc).data)\n\nqc_t3 = transpile(qc, optimization_level=3, basis_gates=['p', 't', 'rz', 'cx'])\n\nprint(f\"Global Phase: {float(qc_t3.global_phase):.4f}\")\nprint(\"Operator Matrix:\")\nprint(Operator(qc_t3).data)\n```\nOutput:\n```text\nGlobal Phase: 0.0000\nOperator Matrix:\n[[1.+0.j 0.+0.j]\n [0.+0.j 1.+0.j]]\nGlobal Phase: 3.1416\nOperator Matrix:\n[[-1.+0.j -0.+0.j]\n [-0.+0.j -1.+0.j]]\n```\n\n### What should happen?\n\nThe global phase after transpilation should remain `0.0000`, and the operator matrix should remain the identity matrix `[[1.+0.j, 0.+0.j], [0.+0.j, 1.+0.j]]`. The original and transpiled circuits must remain strictly unitarily equivalent.\n\n### Any suggestions?\n\nThe bug is located in the Rust transpiler core at `crates/transpiler/src/passes/commutation_cancellation.rs`.\n\nWhen the accumulated angle `mod4` reaches `2π`, the code unconditionally executes `total_phase -= PI;`. This logic is mathematically valid for `RX` and `RZ` variants but incorrect for `P` or `U1` gates.\n\nTo fix this, the phase correction step needs to be conditional based on the resolved identity of `z_var_gate`. The `-PI` compensation should only be applied if the target gate is symmetric (like `RZ`). If `z_var_gate` evaluates to `P` or `U1`, the `-PI` global phase subtraction must be explicitly skipped.",
+    "state": "closed",
+    "state_reason": "completed",
+    "created_at": "2026-06-05T05:04:40Z",
+    "updated_at": "2026-07-01T13:25:46Z",
+    "closed_at": "2026-07-01T13:25:46Z",
+    "author": "Timeless-hep"
+  },
+  "comments": [
+    {
+      "id": 4636158715,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/16377#issuecomment-4636158715",
+      "body": "I'd like to work on this. Could I be assigned?",
+      "created_at": "2026-06-05T22:44:08Z",
+      "updated_at": "2026-06-05T22:44:08Z",
+      "author": "7673502"
+    },
+    {
+      "id": 4637161402,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/16377#issuecomment-4637161402",
+      "body": "Assigned.",
+      "created_at": "2026-06-06T03:03:15Z",
+      "updated_at": "2026-06-06T03:03:15Z",
+      "author": "alexanderivrii"
+    }
+  ],
+  "state_events": [
+    {
+      "event": "closed",
+      "created_at": "2026-07-01T13:25:46Z",
+      "commit_id": null,
+      "commit_url": null,
+      "actor": "jakelishman"
+    }
+  ],
+  "integrity": {
+    "body_sha256": "393c01f37c09e37e4e0fb1feedd920f5ae180269133dc513cfda1708a54d7f2c",
+    "comment_body_sha256": {
+      "4636158715": "1826c15b7da0fe637bfc6cfbff1f6c7249b3de2506b771829a6f63f0a9781f3a",
+      "4637161402": "16603b0dbcf41e34e94a14efa9f9d40de5e6bd39063ba68317ad4a81504378f6"
+    },
+    "expected_comment_count": 2
+  }
+}

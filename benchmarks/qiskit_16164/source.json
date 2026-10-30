@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "repository": "Qiskit/qiskit",
+  "retrieved_at": "2026-10-30T17:28:03+00:00",
+  "issue": {
+    "number": 16164,
+    "title": "CommutationChecker yields false positives for CRZ and SWAP resulting in silent miscompilation",
+    "html_url": "https://github.com/Qiskit/qiskit/issues/16164",
+    "body": "### Environment\n\n- **Qiskit version**: 2.4.1\n- **Python version**: 3.13.13\n- **Operating system**: MacOS\n\n\n### What is happening?\n\nThe CommutationChecker incorrectly evaluates the commutation relation between topological exchange gates (like SwapGate or iSwapGate) and asymmetric controlled continuous rotation gates (like CRZGate). It returns True (commutes) when they mathematically do NOT commute.\n\nBecause core transpiler passes rely on this checker, this underlying logic flaw leads to silent miscompilation. Specifically, passes like CommutativeInverseCancellation will illegally push gates past each other and erroneously cancel required topological routing gates. This completely alters the physical meaning and the unitary matrix of the circuit without raising any warnings or errors.\n\n### How can we reproduce the issue?\n\nHere is a minimal reproducible example demonstrating how this bug silently corrupts the transpilation process.\n\nWe construct a SWAP -> CRZ -> SWAP sequence, which mathematically represents a direction-reversed CRZ gate. However, the CommutativeInverseCancellation pass incorrectly assumes CRZ commutes with SWAP, illegally bringing the two SWAP gates together and cancelling them out.\n# code\nfrom qiskit import QuantumCircuit\nfrom qiskit.quantum_info import Operator\nfrom qiskit.transpiler import PassManager\nfrom qiskit.transpiler.passes import CommutativeInverseCancellation\nimport numpy as np\n\n\nqc = QuantumCircuit(2)\nqc.swap(0, 1)\nqc.crz(1.0, 0, 1)\nqc.swap(0, 1)\n\n\nout = PassManager([CommutativeInverseCancellation()]).run(qc)\n\n\nprint(out.count_ops()) \nprint(np.allclose(Operator(qc).data, Operator(out).data)) \nprint(out)\n\n### What should happen?\n\nThe transpiler pass should recognize that SWAP and CRZ do NOT commute, so the two SWAP gates in the sequence must NOT be canceled. \n\n### Any suggestions?\n\nThe bug appears to originate in the Rust backend: qiskit/circuit/commutation_checker.rs. In the build_supported_rotations() mapping, CRZ is mapped to its discrete generator, the CZ gate.\nWhile CZ is perfectly symmetric ($CZ_{0,1} = CZ_{1,0}$) and thus genuinely commutes with SWAP, CRZ is asymmetric. The checker incorrectly allows CRZ to inherit the spatial symmetry of CZ, leading to the false positive. It's better to consider removing the CRZ -> CZ mapping from build_supported_rotations(), or introducing an explicit symmetry check in the Rust backend to ensure that asymmetric controlled rotations cannot inherit the commutation rules of symmetric topological configurations.",
+    "state": "closed",
+    "state_reason": "completed",
+    "created_at": "2026-05-11T09:21:48Z",
+    "updated_at": "2026-06-08T21:20:01Z",
+    "closed_at": "2026-06-08T21:20:01Z",
+    "author": "Timeless-hep"
+  },
+  "comments": [
+    {
+      "id": 4419525434,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/16164#issuecomment-4419525434",
+      "body": "Thanks for the report, that's definitely a bug. This actually goes deeper and affects all reductions from controlled rotations to fixed-controlled gates, since we can always construct some gate that commutes with `C<Pauli>` but does not with `CR<Pauli>(some angle)`. For example\n```python\nfrom qiskit.circuit import CommutationChecker, QuantumCircuit, library\nfrom qiskit.quantum_info import Operator\n\n# Example from this issue\n# swap = library.SwapGate()\n# cr = library.CRZGate(0.2)\n\n# X-version of this......\nsome_swap = QuantumCircuit(2)\nsome_swap.h(1)\nsome_swap.swap(0, 1)\nsome_swap.h(1)\n\nswap = library.UnitaryGate(Operator(some_swap).data)\ncr = library.CRXGate(1.2)\n\ncc = CommutationChecker()\nprint(cc.commute(swap, [0, 1], [], cr, [0, 1], []))  # reduces CRX -> CX, prints `True`\n\ncr_matrix = library.UnitaryGate(cr.to_matrix())\nprint(cc.commute(swap, [0, 1], [], cr_matrix, [0, 1], []))  # sanity check, prints `False`\n```\nThis reduction seems to only be correct for `CPhase -> CZ`. We should be able to leverage the newly added standard gate exponents of #15925 to handle this correctly.",
+      "created_at": "2026-05-11T10:02:31Z",
+      "updated_at": "2026-05-11T10:02:31Z",
+      "author": "Cryoris"
+    },
+    {
+      "id": 4422837712,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/16164#issuecomment-4422837712",
+      "body": "Thanks, indeed looking at the `standard_generators` and `convert_to_pauli_rotation` code, the generator for CRX is `1/2 (-ZX + IX)`, which is different from CX or its generator.\n\nI do agree about `CPhase -> CZ` since both `CPhase(t) = exp(-i t/4 (-ZZ + ZI + IZ))` and `CZ = exp(-i pi/4 (ZZ - ZI - IZ))` have the same generator up to a constant.",
+      "created_at": "2026-05-11T16:50:30Z",
+      "updated_at": "2026-05-11T16:50:30Z",
+      "author": "alexanderivrii"
+    },
+    {
+      "id": 4427725696,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/16164#issuecomment-4427725696",
+      "body": "It seems that some of the elements in this table are not correct:\nhttps://github.com/Qiskit/qiskit/blob/02f052dfce3bb1fd9a5818d72d1536811acbaea4/crates/transpiler/src/commutation_checker.rs#L111\n\nAccording to https://github.com/Qiskit/qiskit/blob/main/crates/circuit/src/standard_gate/standard_generators.rs, we can only use generators if they have the same standard generator (up to a coefficient).\n\nThis is correct for RX, RY, RZ, Phase, U1, CPhase.\nBut this does not hold for CRX, CRY and CRZ which have different standard generators than CX, CY and CZ respectively.\n\nThe immediate solution is to remove CRX, CRY and CRZ from `build_supported_rotations`.",
+      "created_at": "2026-05-12T05:57:45Z",
+      "updated_at": "2026-05-12T05:57:45Z",
+      "author": "ShellyGarion"
+    },
+    {
+      "id": 4429417716,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/16164#issuecomment-4429417716",
+      "body": "Yeah this is what the issue description also already mentions:\n\n> It's better to consider removing the CRZ -> CZ mapping from build_supported_rotations()\n\nI don't think we can simply remove them, since CRX/CRY/CRZ are not in the commutation library and removing them would change the commutation checker's behavior (if the max. matrix qubits are set to below 2). Instead it would be nice to use the standard exponent path, or, as maybe less-preferred option, add these gates to the commutation library.",
+      "created_at": "2026-05-12T10:05:30Z",
+      "updated_at": "2026-05-12T10:05:30Z",
+      "author": "Cryoris"
+    }
+  ],
+  "state_events": [
+    {
+      "event": "closed",
+      "created_at": "2026-06-08T21:20:01Z",
+      "commit_id": null,
+      "commit_url": null,
+      "actor": "alexanderivrii"
+    }
+  ],
+  "integrity": {
+    "body_sha256": "fd2f2e783dad566f350bda4e5145c69299894087bb2cabfb93ee4d4757086a09",
+    "comment_body_sha256": {
+      "4419525434": "fa5f18a01b2f6aeb6967659d05c2acd1a8efdb9691a5d96c47887244c3279fde",
+      "4422837712": "5e028f17ec37b1bf0227ebbb1bb32717d00835411f5c5b1e77a5885c22c696f1",
+      "4427725696": "5bcad189a5fd61ee9ad622b1d52351678c3ec26148481d014e2b8621166b462e",
+      "4429417716": "11ced0adf61ac6cb1a456b74956f491d4286d1bf084d6b1710e5bcf8ed61e1eb"
+    },
+    "expected_comment_count": 4
+  }
+}
