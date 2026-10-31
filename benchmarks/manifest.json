@@ -1,0 +1,861 @@
+{
+  "schema_version": 1,
+  "repository": "Qiskit/qiskit",
+  "curated_at": "2026-10-30T17:28:03+00:00",
+  "scope": "The 26 circuit-related reports from the initial research result; retained with corrected assessments, not a claim that all are confirmed bugs.",
+  "benchmarks": [
+    {
+      "issue_number": 17057,
+      "reported_versions": [
+        "2.5.2"
+      ],
+      "reported_version_notes": "Version(s) reported in the original issue environment; not a first-affected boundary.",
+      "assessment": "confirmed_bug",
+      "assessment_notes": "Two-qubit CX/ZSX synthesis near the two-CX boundary produces a circuit with approximately 0.07 average infidelity rather than the requested fidelity.",
+      "resolution_notes": "Merged fix #17163; the stable backport #17226 is verified in 2.6.0.",
+      "assessment_sources": [],
+      "verified_fixed_releases": [
+        {
+          "version": "2.6.0",
+          "distribution": "qiskit",
+          "original_pull_request": 17163,
+          "pull_request": 17226,
+          "pull_request_url": "https://github.com/Qiskit/qiskit/pull/17226",
+          "merge_commit": "fda383a901a4c1f0e99e5603ec5be8fa710b0167",
+          "merged_at": "2026-10-15T14:04:34Z",
+          "release_url": "https://github.com/Qiskit/qiskit/releases/tag/2.6.0",
+          "release_published_at": "2026-10-16T12:04:54Z",
+          "ancestry": {
+            "ahead_by": 1,
+            "base_commit": "fda383a901a4c1f0e99e5603ec5be8fa710b0167",
+            "behind_by": 0,
+            "html_url": "https://github.com/Qiskit/qiskit/compare/fda383a901a4c1f0e99e5603ec5be8fa710b0167...2.6.0",
+            "merge_base_commit": "fda383a901a4c1f0e99e5603ec5be8fa710b0167",
+            "status": "ahead"
+          },
+          "verification_method": "Fix merge commit is an ancestor of the published release tag.",
+          "earliest_release_claimed": false,
+          "verified_at": "2026-10-30T17:28:03+00:00"
+        }
+      ],
+      "source_sha256": "295b069d84eeaa747f48d2ef9b0e9ae460a67ee8067e5b2cf5a7f180bba1235b"
+    },
+    {
+      "issue_number": 16919,
+      "reported_versions": [
+        "2.5.2"
+      ],
+      "reported_version_notes": "Version(s) reported in the original issue environment; not a first-affected boundary.",
+      "assessment": "confirmed_bug",
+      "assessment_notes": "Circuit-representation bug: MCX/MCZ synthesis with at least five controls drops packed MCPhase parameter metadata, producing unparseable QASM3. This is not evidence that an executable circuit silently changes its unitary.",
+      "resolution_notes": "The reporter confirmed that #16781 fixes the reproducer. Release 2.6.0 contains the merged fix.",
+      "assessment_sources": [
+        "https://github.com/Qiskit/qiskit/issues/16919#issuecomment-5534225404"
+      ],
+      "verified_fixed_releases": [
+        {
+          "version": "2.6.0",
+          "distribution": "qiskit",
+          "original_pull_request": 16781,
+          "pull_request": 16781,
+          "pull_request_url": "https://github.com/Qiskit/qiskit/pull/16781",
+          "merge_commit": "23f9e8f7aee57465cd757a16312f735531c1fce4",
+          "merged_at": "2026-08-17T05:20:31Z",
+          "release_url": "https://github.com/Qiskit/qiskit/releases/tag/2.6.0",
+          "release_published_at": "2026-10-16T12:04:54Z",
+          "ancestry": {
+            "ahead_by": 163,
+            "base_commit": "23f9e8f7aee57465cd757a16312f735531c1fce4",
+            "behind_by": 0,
+            "html_url": "https://github.com/Qiskit/qiskit/compare/23f9e8f7aee57465cd757a16312f735531c1fce4...2.6.0",
+            "merge_base_commit": "23f9e8f7aee57465cd757a16312f735531c1fce4",
+            "status": "ahead"
+          },
+          "verification_method": "Fix merge commit is an ancestor of the published release tag.",
+          "earliest_release_claimed": false,
+          "verified_at": "2026-10-30T17:28:03+00:00"
+        }
+      ],
+      "source_sha256": "fb8aa6d6123edee59afbb4d7ef7e6196704d90d49490c01b2ddc9aa8bc0d2d11"
+    },
+    {
+      "issue_number": 16860,
+      "reported_versions": [
+        "2.5.2",
+        "2.6.0.dev0+b6f798f"
+      ],
+      "reported_version_notes": "Version(s) reported in the original issue environment; not a first-affected boundary.",
+      "assessment": "confirmed_bug",
+      "assessment_notes": "An asymmetric Pauli evolution on reversed qargs is rebuilt in global DAG qubit order, changing the unitary. The report supplies source and expected circuits.",
+      "resolution_notes": "Issue and proposed fix #16979 were open at collection time. No merged fix or released fixed version is verified.",
+      "assessment_sources": [],
+      "verified_fixed_releases": [],
+      "source_sha256": "77c150474889641f933b666bdef794786b3869e57d00e13e7752ae9919a1d0d7"
+    },
+    {
+      "issue_number": 16856,
+      "reported_versions": [
+        "2.5.2",
+        "2.6.0.dev0+b6f798f"
+      ],
+      "reported_version_notes": "Version(s) reported in the original issue environment; not a first-affected boundary.",
+      "assessment": "confirmed_bug",
+      "assessment_notes": "Duplicate Pauli summands are overwritten: 0.2*ZZ + 0.4*ZZ becomes 0.4*ZZ instead of 0.6*ZZ.",
+      "resolution_notes": "Merged fix #16892 is verified in 2.6.0.",
+      "assessment_sources": [],
+      "verified_fixed_releases": [
+        {
+          "version": "2.6.0",
+          "distribution": "qiskit",
+          "original_pull_request": 16892,
+          "pull_request": 16892,
+          "pull_request_url": "https://github.com/Qiskit/qiskit/pull/16892",
+          "merge_commit": "7e36091634262079010b16e47b6f0e3999bf5e65",
+          "merged_at": "2026-09-03T06:06:22Z",
+          "release_url": "https://github.com/Qiskit/qiskit/releases/tag/2.6.0",
+          "release_published_at": "2026-10-16T12:04:54Z",
+          "ancestry": {
+            "ahead_by": 120,
+            "base_commit": "7e36091634262079010b16e47b6f0e3999bf5e65",
+            "behind_by": 0,
+            "html_url": "https://github.com/Qiskit/qiskit/compare/7e36091634262079010b16e47b6f0e3999bf5e65...2.6.0",
+            "merge_base_commit": "7e36091634262079010b16e47b6f0e3999bf5e65",
+            "status": "ahead"
+          },
+          "verification_method": "Fix merge commit is an ancestor of the published release tag.",
+          "earliest_release_claimed": false,
+          "verified_at": "2026-10-30T17:28:03+00:00"
+        }
+      ],
+      "source_sha256": "16b3ea320c5f2d38c72a09d0adc4ef8e964299fbd2352346ac1128b3ad19cdd9"
+    },
+    {
+      "issue_number": 16594,
+      "reported_versions": [
+        "2.5.0"
+      ],
+      "reported_version_notes": "Version(s) reported in the original issue environment; not a first-affected boundary.",
+      "assessment": "confirmed_bug",
+      "assessment_notes": "CommutativeCancellation drops negative X-rotation sums. Two SXdg gates must produce X or remain in the circuit, not disappear.",
+      "resolution_notes": "Merged fix #16599 and its backport are verified in 2.5.1.",
+      "assessment_sources": [],
+      "verified_fixed_releases": [
+        {
+          "version": "2.5.1",
+          "distribution": "qiskit",
+          "original_pull_request": 16599,
+          "pull_request": 16615,
+          "pull_request_url": "https://github.com/Qiskit/qiskit/pull/16615",
+          "merge_commit": "7b6cb24ccf297fc6c97b6e109e6d474def3404e6",
+          "merged_at": "2026-07-20T11:08:21Z",
+          "release_url": "https://github.com/Qiskit/qiskit/releases/tag/2.5.1",
+          "release_published_at": "2026-07-23T17:09:41Z",
+          "ancestry": {
+            "ahead_by": 8,
+            "base_commit": "7b6cb24ccf297fc6c97b6e109e6d474def3404e6",
+            "behind_by": 0,
+            "html_url": "https://github.com/Qiskit/qiskit/compare/7b6cb24ccf297fc6c97b6e109e6d474def3404e6...2.5.1",
+            "merge_base_commit": "7b6cb24ccf297fc6c97b6e109e6d474def3404e6",
+            "status": "ahead"
+          },
+          "verification_method": "Fix merge commit is an ancestor of the published release tag.",
+          "earliest_release_claimed": false,
+          "verified_at": "2026-10-30T17:28:03+00:00"
+        }
+      ],
+      "source_sha256": "be7e25c718487a325ea6fe06d9153b43652cba7fbb45c11eb7854dd273a3a0d2"
+    },
+    {
+      "issue_number": 16524,
+      "reported_versions": [],
+      "reported_version_notes": "The original Environment fields are blank. No numerical affected Qiskit version is supplied; none is inferred from the report date.",
+      "assessment": "confirmed_bug",
+      "assessment_notes": "Circuit-synthesis failure for a tautological Boolean oracle. A phase oracle for an all-true function should implement -I; a bit-flip oracle should apply an unconditional X. The issue's original expression contains a typo corrected in the first comment.",
+      "resolution_notes": "Merged fix #16530 is verified in 2.6.0; its stable backport is already verified in 2.5.1.",
+      "assessment_sources": [
+        "https://github.com/Qiskit/qiskit/issues/16524#issuecomment-4866519479"
+      ],
+      "verified_fixed_releases": [
+        {
+          "version": "2.5.1",
+          "distribution": "qiskit",
+          "original_pull_request": 16530,
+          "pull_request": 16543,
+          "pull_request_url": "https://github.com/Qiskit/qiskit/pull/16543",
+          "merge_commit": "e1bf45efc1fc60f261f6127fad07bbafc33e8646",
+          "merged_at": "2026-07-08T07:25:58Z",
+          "release_url": "https://github.com/Qiskit/qiskit/releases/tag/2.5.1",
+          "release_published_at": "2026-07-23T17:09:41Z",
+          "ancestry": {
+            "ahead_by": 13,
+            "base_commit": "e1bf45efc1fc60f261f6127fad07bbafc33e8646",
+            "behind_by": 0,
+            "html_url": "https://github.com/Qiskit/qiskit/compare/e1bf45efc1fc60f261f6127fad07bbafc33e8646...2.5.1",
+            "merge_base_commit": "e1bf45efc1fc60f261f6127fad07bbafc33e8646",
+            "status": "ahead"
+          },
+          "verification_method": "Fix merge commit is an ancestor of the published release tag.",
+          "earliest_release_claimed": false,
+          "verified_at": "2026-10-30T17:28:03+00:00"
+        },
+        {
+          "version": "2.6.0",
+          "distribution": "qiskit",
+          "original_pull_request": 16530,
+          "pull_request": 16530,
+          "pull_request_url": "https://github.com/Qiskit/qiskit/pull/16530",
+          "merge_commit": "705667a1380dc7d069b6df84d9b613eb6de8ca0d",
+          "merged_at": "2026-07-07T10:09:03Z",
+          "release_url": "https://github.com/Qiskit/qiskit/releases/tag/2.6.0",
+          "release_published_at": "2026-10-16T12:04:54Z",
+          "ancestry": {
+            "ahead_by": 246,
+            "base_commit": "705667a1380dc7d069b6df84d9b613eb6de8ca0d",
+            "behind_by": 0,
+            "html_url": "https://github.com/Qiskit/qiskit/compare/705667a1380dc7d069b6df84d9b613eb6de8ca0d...2.6.0",
+            "merge_base_commit": "705667a1380dc7d069b6df84d9b613eb6de8ca0d",
+            "status": "ahead"
+          },
+          "verification_method": "Fix merge commit is an ancestor of the published release tag.",
+          "earliest_release_claimed": false,
+          "verified_at": "2026-10-30T17:28:03+00:00"
+        }
+      ],
+      "source_sha256": "08fcbc9a9efe3814dc268aadc7ad2cc0886cfa7e3c7f9afa840b71cba085a35e"
+    },
+    {
+      "issue_number": 16456,
+      "reported_versions": [],
+      "reported_version_notes": "The issue reports 'main branch', without a numerical release or commit. Python 3.10+ in the environment is not a Qiskit version.",
+      "assessment": "confirmed_bug",
+      "assessment_notes": "Circuit-representation/parameter-tracking bug: Commuting2qBlock exposes an empty parameter list for parametric input gates.",
+      "resolution_notes": "Merged fix #16459 is verified in 2.6.0.",
+      "assessment_sources": [],
+      "verified_fixed_releases": [
+        {
+          "version": "2.6.0",
+          "distribution": "qiskit",
+          "original_pull_request": 16459,
+          "pull_request": 16459,
+          "pull_request_url": "https://github.com/Qiskit/qiskit/pull/16459",
+          "merge_commit": "5647a61094ae99c07aaee0f4358b4a19f5a42fd8",
+          "merged_at": "2026-07-07T12:42:43Z",
+          "release_url": "https://github.com/Qiskit/qiskit/releases/tag/2.6.0",
+          "release_published_at": "2026-10-16T12:04:54Z",
+          "ancestry": {
+            "ahead_by": 245,
+            "base_commit": "5647a61094ae99c07aaee0f4358b4a19f5a42fd8",
+            "behind_by": 0,
+            "html_url": "https://github.com/Qiskit/qiskit/compare/5647a61094ae99c07aaee0f4358b4a19f5a42fd8...2.6.0",
+            "merge_base_commit": "5647a61094ae99c07aaee0f4358b4a19f5a42fd8",
+            "status": "ahead"
+          },
+          "verification_method": "Fix merge commit is an ancestor of the published release tag.",
+          "earliest_release_claimed": false,
+          "verified_at": "2026-10-30T17:28:03+00:00"
+        }
+      ],
+      "source_sha256": "f6ec20f048246db34d629c71648a0d42b677fcf755c2560de95a03999980af68"
+    },
+    {
+      "issue_number": 16411,
+      "reported_versions": [
+        "2.4.1"
+      ],
+      "reported_version_notes": "Version(s) reported in the original issue environment; not a first-affected boundary.",
+      "assessment": "disputed_report",
+      "assessment_notes": "Negative fractional matrix powers involve branch-cut semantics. The reported canonicalization can differ from the requested principal matrix power; upstream discusses the intended semantics rather than accepting the proposed rewrite as a settled fix.",
+      "resolution_notes": "Issue remains open. Proposed #16438 closed without merging. No fixed release is verified.",
+      "assessment_sources": [],
+      "verified_fixed_releases": [],
+      "source_sha256": "c6353713baabe15cf8203bb2ab40daa279789555ddcf3817508ef0ac511f359f"
+    },
+    {
+      "issue_number": 16377,
+      "reported_versions": [
+        "2.4.1"
+      ],
+      "reported_version_notes": "Version(s) reported in the original issue environment; not a first-affected boundary.",
+      "assessment": "confirmed_bug",
+      "assessment_notes": "CommutativeCancellation adds an erroneous pi global phase when P/U1 rotations sum to 2*pi. The expected operator is I, not -I; a later control can make this phase observable.",
+      "resolution_notes": "Merged fix #16402 is verified in 2.5.0.",
+      "assessment_sources": [],
+      "verified_fixed_releases": [
+        {
+          "version": "2.5.0",
+          "distribution": "qiskit",
+          "original_pull_request": 16402,
+          "pull_request": 16509,
+          "pull_request_url": "https://github.com/Qiskit/qiskit/pull/16509",
+          "merge_commit": "8be74007537cd1a396ddf95e86872f20764a08d8",
+          "merged_at": "2026-07-01T14:15:26Z",
+          "release_url": "https://github.com/Qiskit/qiskit/releases/tag/2.5.0",
+          "release_published_at": "2026-07-02T18:51:37Z",
+          "ancestry": {
+            "ahead_by": 10,
+            "base_commit": "8be74007537cd1a396ddf95e86872f20764a08d8",
+            "behind_by": 0,
+            "html_url": "https://github.com/Qiskit/qiskit/compare/8be74007537cd1a396ddf95e86872f20764a08d8...2.5.0",
+            "merge_base_commit": "8be74007537cd1a396ddf95e86872f20764a08d8",
+            "status": "ahead"
+          },
+          "verification_method": "Fix merge commit is an ancestor of the published release tag.",
+          "earliest_release_claimed": false,
+          "verified_at": "2026-10-30T17:28:03+00:00"
+        }
+      ],
+      "source_sha256": "542e87e281980670414cd156ae7aded3cfd872fffb6e64f427d04fe660ef1e94"
+    },
+    {
+      "issue_number": 16164,
+      "reported_versions": [
+        "2.4.1"
+      ],
+      "reported_version_notes": "Version(s) reported in the original issue environment; not a first-affected boundary.",
+      "assessment": "confirmed_bug",
+      "assessment_notes": "False CRZ/SWAP commutation permits invalid SWAP cancellation and changes the circuit unitary.",
+      "resolution_notes": "Merged fix #16337 is verified in 2.5.0; backport #16395 is verified in 2.4.2.",
+      "assessment_sources": [],
+      "verified_fixed_releases": [
+        {
+          "version": "2.4.2",
+          "distribution": "qiskit",
+          "original_pull_request": 16337,
+          "pull_request": 16395,
+          "pull_request_url": "https://github.com/Qiskit/qiskit/pull/16395",
+          "merge_commit": "1da93bbdb50008f778e93e394b4653b111031181",
+          "merged_at": "2026-06-09T07:53:05Z",
+          "release_url": "https://github.com/Qiskit/qiskit/releases/tag/2.4.2",
+          "release_published_at": "2026-06-12T17:39:03Z",
+          "ancestry": {
+            "ahead_by": 3,
+            "base_commit": "1da93bbdb50008f778e93e394b4653b111031181",
+            "behind_by": 0,
+            "html_url": "https://github.com/Qiskit/qiskit/compare/1da93bbdb50008f778e93e394b4653b111031181...2.4.2",
+            "merge_base_commit": "1da93bbdb50008f778e93e394b4653b111031181",
+            "status": "ahead"
+          },
+          "verification_method": "Fix merge commit is an ancestor of the published release tag.",
+          "earliest_release_claimed": false,
+          "verified_at": "2026-10-30T17:28:03+00:00"
+        },
+        {
+          "version": "2.5.0",
+          "distribution": "qiskit",
+          "original_pull_request": 16337,
+          "pull_request": 16337,
+          "pull_request_url": "https://github.com/Qiskit/qiskit/pull/16337",
+          "merge_commit": "592c1de0065816fb6f4c52fbd0bfdc5922936111",
+          "merged_at": "2026-06-08T21:19:59Z",
+          "release_url": "https://github.com/Qiskit/qiskit/releases/tag/2.5.0",
+          "release_published_at": "2026-07-02T18:51:37Z",
+          "ancestry": {
+            "ahead_by": 51,
+            "base_commit": "592c1de0065816fb6f4c52fbd0bfdc5922936111",
+            "behind_by": 0,
+            "html_url": "https://github.com/Qiskit/qiskit/compare/592c1de0065816fb6f4c52fbd0bfdc5922936111...2.5.0",
+            "merge_base_commit": "592c1de0065816fb6f4c52fbd0bfdc5922936111",
+            "status": "ahead"
+          },
+          "verification_method": "Fix merge commit is an ancestor of the published release tag.",
+          "earliest_release_claimed": false,
+          "verified_at": "2026-10-30T17:28:03+00:00"
+        }
+      ],
+      "source_sha256": "327dd87c30efafb075a5eabaa792764fcd6a606395c7b53b8654216b62483f2f"
+    },
+    {
+      "issue_number": 16161,
+      "reported_versions": [
+        "2.4.1"
+      ],
+      "reported_version_notes": "Version(s) reported in the original issue environment; not a first-affected boundary.",
+      "assessment": "confirmed_bug",
+      "assessment_notes": "A general two-parameter XXPlusYY gate is direction-sensitive, so reversed-qarg gates must not be canceled as a symmetric inverse pair.",
+      "resolution_notes": "Merged fix #16163 is verified in 2.5.0. The issue's 2.4.2 milestone alone is not used as release evidence.",
+      "assessment_sources": [],
+      "verified_fixed_releases": [
+        {
+          "version": "2.5.0",
+          "distribution": "qiskit",
+          "original_pull_request": 16163,
+          "pull_request": 16163,
+          "pull_request_url": "https://github.com/Qiskit/qiskit/pull/16163",
+          "merge_commit": "1e13f243026334c68f4b760823dccf3cb3c4f03b",
+          "merged_at": "2026-05-18T10:12:02Z",
+          "release_url": "https://github.com/Qiskit/qiskit/releases/tag/2.5.0",
+          "release_published_at": "2026-07-02T18:51:37Z",
+          "ancestry": {
+            "ahead_by": 140,
+            "base_commit": "1e13f243026334c68f4b760823dccf3cb3c4f03b",
+            "behind_by": 0,
+            "html_url": "https://github.com/Qiskit/qiskit/compare/1e13f243026334c68f4b760823dccf3cb3c4f03b...2.5.0",
+            "merge_base_commit": "1e13f243026334c68f4b760823dccf3cb3c4f03b",
+            "status": "ahead"
+          },
+          "verification_method": "Fix merge commit is an ancestor of the published release tag.",
+          "earliest_release_claimed": false,
+          "verified_at": "2026-10-30T17:28:03+00:00"
+        }
+      ],
+      "source_sha256": "e5927856552bde08f7df36ab2b6d22128dbed5167772aec997bc1cede03d2e9e"
+    },
+    {
+      "issue_number": 16168,
+      "reported_versions": [
+        "2.4.1"
+      ],
+      "reported_version_notes": "Version(s) reported in the original issue environment; not a first-affected boundary.",
+      "assessment": "confirmed_bug",
+      "assessment_notes": "Circuit-definition width bug: MultiplierGate(1,1) declares three qubits but generates a four-qubit definition, making decomposition fail.",
+      "resolution_notes": "Merged fix #16394 is verified in 2.5.0, and a stable backport is verified in 2.4.2. Comments mentioning other unmerged proposals are not treated as proof that those proposals shipped.",
+      "assessment_sources": [],
+      "verified_fixed_releases": [
+        {
+          "version": "2.4.2",
+          "distribution": "qiskit",
+          "original_pull_request": 16394,
+          "pull_request": 16399,
+          "pull_request_url": "https://github.com/Qiskit/qiskit/pull/16399",
+          "merge_commit": "b75807b84298b7e851479e43c72cf883671a2b19",
+          "merged_at": "2026-06-09T11:10:39Z",
+          "release_url": "https://github.com/Qiskit/qiskit/releases/tag/2.4.2",
+          "release_published_at": "2026-06-12T17:39:03Z",
+          "ancestry": {
+            "ahead_by": 2,
+            "base_commit": "b75807b84298b7e851479e43c72cf883671a2b19",
+            "behind_by": 0,
+            "html_url": "https://github.com/Qiskit/qiskit/compare/b75807b84298b7e851479e43c72cf883671a2b19...2.4.2",
+            "merge_base_commit": "b75807b84298b7e851479e43c72cf883671a2b19",
+            "status": "ahead"
+          },
+          "verification_method": "Fix merge commit is an ancestor of the published release tag.",
+          "earliest_release_claimed": false,
+          "verified_at": "2026-10-30T17:28:03+00:00"
+        },
+        {
+          "version": "2.5.0",
+          "distribution": "qiskit",
+          "original_pull_request": 16394,
+          "pull_request": 16394,
+          "pull_request_url": "https://github.com/Qiskit/qiskit/pull/16394",
+          "merge_commit": "d89a84bd7450b80211d7999bc603acbd91676f07",
+          "merged_at": "2026-06-09T09:21:21Z",
+          "release_url": "https://github.com/Qiskit/qiskit/releases/tag/2.5.0",
+          "release_published_at": "2026-07-02T18:51:37Z",
+          "ancestry": {
+            "ahead_by": 48,
+            "base_commit": "d89a84bd7450b80211d7999bc603acbd91676f07",
+            "behind_by": 0,
+            "html_url": "https://github.com/Qiskit/qiskit/compare/d89a84bd7450b80211d7999bc603acbd91676f07...2.5.0",
+            "merge_base_commit": "d89a84bd7450b80211d7999bc603acbd91676f07",
+            "status": "ahead"
+          },
+          "verification_method": "Fix merge commit is an ancestor of the published release tag.",
+          "earliest_release_claimed": false,
+          "verified_at": "2026-10-30T17:28:03+00:00"
+        }
+      ],
+      "source_sha256": "c86aa2a6c8301fba0c0b9210962b3d71b28776442e9143dba27bcbd8dcc16099"
+    },
+    {
+      "issue_number": 14356,
+      "reported_versions": [
+        "2.0.0"
+      ],
+      "reported_version_notes": "Version(s) reported in the original issue environment; not a first-affected boundary.",
+      "assessment": "confirmed_bug",
+      "assessment_notes": "HoareOptimizer can treat distinct composite instructions as matching and remove them incorrectly. Preserve the circuit unless identity has been proved; the original report includes a reference circuit.",
+      "resolution_notes": "Issue and proposed #16807 were open at collection time. No released fixed version is verified.",
+      "assessment_sources": [],
+      "verified_fixed_releases": [],
+      "source_sha256": "c128ab6ff27966451a11c75070505fc469943f916938463d45394be5e14413ab"
+    },
+    {
+      "issue_number": 14265,
+      "reported_versions": [
+        "2.0"
+      ],
+      "reported_version_notes": "Version(s) reported in the original issue environment; not a first-affected boundary.",
+      "assessment": "disputed_report",
+      "assessment_notes": "The initial wrong-inverse claim is qualified by the author and maintainer: StatePreparation only promises |0> -> |psi>, not a unique full-space unitary. String and vector inputs may validly choose different unitary extensions. Do not treat |+> vs |-> on inverse input |0> alone as a confirmed circuit-semantics bug.",
+      "resolution_notes": "Issue remains open with discussion of consistency/documentation. No numerical fixed version is applicable or verified for the original claim.",
+      "assessment_sources": [
+        "https://github.com/Qiskit/qiskit/issues/14265#issuecomment-2844831103",
+        "https://github.com/Qiskit/qiskit/issues/14265#issuecomment-2844856579"
+      ],
+      "verified_fixed_releases": [],
+      "source_sha256": "deba0481d469618be24e8c06a6a884ab06b38d25976f88d08f577792d06a6e93"
+    },
+    {
+      "issue_number": 13547,
+      "reported_versions": [
+        "1.3.0",
+        "2.0.0.dev0+841cb29",
+        "1.2.4"
+      ],
+      "reported_version_notes": "The first RY example fails on 1.3.0/main but passes on 1.2.4. The second PauliEvolutionGate example also fails on 1.2.4. The development-version string comes from the original output.",
+      "assessment": "confirmed_bug",
+      "assessment_notes": "Small-angle RY/Pauli evolution can be treated inconsistently by commutation and identity-removal passes, leading to invalid entangling-gate cancellation.",
+      "resolution_notes": "Merged fix #13874 aligns commutation-check fidelity thresholds and is verified in 2.0.0.",
+      "assessment_sources": [],
+      "verified_fixed_releases": [
+        {
+          "version": "2.0.0",
+          "distribution": "qiskit",
+          "original_pull_request": 13874,
+          "pull_request": 13874,
+          "pull_request_url": "https://github.com/Qiskit/qiskit/pull/13874",
+          "merge_commit": "d2f486180ffbf410150961ccf35fa8984a3324c9",
+          "merged_at": "2025-03-06T00:34:42Z",
+          "release_url": "https://github.com/Qiskit/qiskit/releases/tag/2.0.0",
+          "release_published_at": "2025-03-31T19:17:28Z",
+          "ancestry": {
+            "ahead_by": 48,
+            "base_commit": "d2f486180ffbf410150961ccf35fa8984a3324c9",
+            "behind_by": 0,
+            "html_url": "https://github.com/Qiskit/qiskit/compare/d2f486180ffbf410150961ccf35fa8984a3324c9...2.0.0",
+            "merge_base_commit": "d2f486180ffbf410150961ccf35fa8984a3324c9",
+            "status": "ahead"
+          },
+          "verification_method": "Fix merge commit is an ancestor of the published release tag.",
+          "earliest_release_claimed": false,
+          "verified_at": "2026-10-30T17:28:03+00:00"
+        }
+      ],
+      "source_sha256": "629a29597fbc62d1bf265c778b84323d71b307583b90ec2bca04cc1438b62003"
+    },
+    {
+      "issue_number": 12948,
+      "reported_versions": [
+        "1.1.1"
+      ],
+      "reported_version_notes": "Version(s) reported in the original issue environment; not a first-affected boundary.",
+      "assessment": "confirmed_bug",
+      "assessment_notes": "Transpiled state preparation at optimization levels 2/3 gives approximately 0.387 fidelity instead of 1.",
+      "resolution_notes": "Maintainer and reporter confirm the new StatePreparation synthesis from #12178 fixes this in 1.2.0rc1. Stable 1.2.0 is ancestry-verified. Closure in 2025 is not used as the fix date.",
+      "assessment_sources": [
+        "https://github.com/Qiskit/qiskit/issues/12948#issuecomment-2286215359",
+        "https://github.com/Qiskit/qiskit/issues/12948#issuecomment-2286806289"
+      ],
+      "verified_fixed_releases": [
+        {
+          "version": "1.2.0",
+          "distribution": "qiskit",
+          "original_pull_request": 12178,
+          "pull_request": 12178,
+          "pull_request_url": "https://github.com/Qiskit/qiskit/pull/12178",
+          "merge_commit": "8b94fc36df05a9f5b2150e7a8ac1c36dca3286d1",
+          "merged_at": "2024-05-08T09:47:23Z",
+          "release_url": "https://github.com/Qiskit/qiskit/releases/tag/1.2.0",
+          "release_published_at": "2024-08-15T20:41:15Z",
+          "ancestry": {
+            "ahead_by": 217,
+            "base_commit": "8b94fc36df05a9f5b2150e7a8ac1c36dca3286d1",
+            "behind_by": 0,
+            "html_url": "https://github.com/Qiskit/qiskit/compare/8b94fc36df05a9f5b2150e7a8ac1c36dca3286d1...1.2.0",
+            "merge_base_commit": "8b94fc36df05a9f5b2150e7a8ac1c36dca3286d1",
+            "status": "ahead"
+          },
+          "verification_method": "Fix merge commit is an ancestor of the published release tag.",
+          "earliest_release_claimed": false,
+          "verified_at": "2026-10-30T17:28:03+00:00"
+        }
+      ],
+      "source_sha256": "00731d5b48e61ed80c8e600a7866ab06b873714f41fb8dc0bde9c8da11cfc390"
+    },
+    {
+      "issue_number": 12694,
+      "reported_versions": [
+        "1.1.0"
+      ],
+      "reported_version_notes": "Version(s) reported in the original issue environment; not a first-affected boundary.",
+      "assessment": "mixed_report",
+      "assessment_notes": "The author acknowledges reversed matrix/qubit conventions. The maintainer explains that QASM2 does not preserve precise global phase. A real legacy 'u' import/export mismatch is mentioned, and later comments allege additional errors; do not classify all claims as a confirmed wrong-unitary circuit bug.",
+      "resolution_notes": "Issue remains open; comments include explanations and a reported workaround. No released fix is verified for the combined report.",
+      "assessment_sources": [
+        "https://github.com/Qiskit/qiskit/issues/12694#issuecomment-2198579280",
+        "https://github.com/Qiskit/qiskit/issues/12694#issuecomment-2200178184",
+        "https://github.com/Qiskit/qiskit/issues/12694#issuecomment-2200368141"
+      ],
+      "verified_fixed_releases": [],
+      "source_sha256": "60ef923384ccca147c243a148acdc683f3948d1a7c1ae4f80e7268a8757a4744"
+    },
+    {
+      "issue_number": 11954,
+      "reported_versions": [],
+      "reported_version_notes": "The original issue has no Environment section or numerical affected Qiskit version. The report date is not a version.",
+      "assessment": "confirmed_bug",
+      "assessment_notes": "QASM3 export conflates distinct XX, YY, and ZZ PauliEvolutionGate definitions, changing the exported circuit.",
+      "resolution_notes": "Merged symbol-table rewrite #12776 is verified in 1.2.0.",
+      "assessment_sources": [],
+      "verified_fixed_releases": [
+        {
+          "version": "1.2.0",
+          "distribution": "qiskit",
+          "original_pull_request": 12776,
+          "pull_request": 12776,
+          "pull_request_url": "https://github.com/Qiskit/qiskit/pull/12776",
+          "merge_commit": "59fc49593a6695fa2dffd8c8f291207706c1686f",
+          "merged_at": "2024-07-22T14:23:07Z",
+          "release_url": "https://github.com/Qiskit/qiskit/releases/tag/1.2.0",
+          "release_published_at": "2024-08-15T20:41:15Z",
+          "ancestry": {
+            "ahead_by": 54,
+            "base_commit": "59fc49593a6695fa2dffd8c8f291207706c1686f",
+            "behind_by": 0,
+            "html_url": "https://github.com/Qiskit/qiskit/compare/59fc49593a6695fa2dffd8c8f291207706c1686f...1.2.0",
+            "merge_base_commit": "59fc49593a6695fa2dffd8c8f291207706c1686f",
+            "status": "ahead"
+          },
+          "verification_method": "Fix merge commit is an ancestor of the published release tag.",
+          "earliest_release_claimed": false,
+          "verified_at": "2026-10-30T17:28:03+00:00"
+        }
+      ],
+      "source_sha256": "c9d47c2b5da012c3f6a2675eabe091d9bd00170ed29999c8707a4db2c1de7b2e"
+    },
+    {
+      "issue_number": 9805,
+      "reported_versions": [
+        "0.24.0.dev0+3005806"
+      ],
+      "reported_version_notes": "Version(s) reported in the original issue environment; not a first-affected boundary.",
+      "assessment": "confirmed_bug",
+      "assessment_notes": "Nested QASM2 gate definitions with distinct coefficients collide, causing invalid export or evaluation with the wrong nested definition.",
+      "resolution_notes": "Merged exporter rewrite #9953 is verified in qiskit-terra 0.24.0.",
+      "assessment_sources": [],
+      "verified_fixed_releases": [
+        {
+          "version": "0.24.0",
+          "distribution": "qiskit-terra",
+          "original_pull_request": 9953,
+          "pull_request": 9953,
+          "pull_request_url": "https://github.com/Qiskit/qiskit/pull/9953",
+          "merge_commit": "639bd58fcbd0ef9505be61ab1c8e4ce95fba6d85",
+          "merged_at": "2023-04-17T22:56:12Z",
+          "release_url": "https://github.com/Qiskit/qiskit/releases/tag/0.24.0",
+          "release_published_at": "2023-05-04T18:24:49Z",
+          "ancestry": {
+            "ahead_by": 42,
+            "base_commit": "639bd58fcbd0ef9505be61ab1c8e4ce95fba6d85",
+            "behind_by": 0,
+            "html_url": "https://github.com/Qiskit/qiskit/compare/639bd58fcbd0ef9505be61ab1c8e4ce95fba6d85...0.24.0",
+            "merge_base_commit": "639bd58fcbd0ef9505be61ab1c8e4ce95fba6d85",
+            "status": "ahead"
+          },
+          "verification_method": "Fix merge commit is an ancestor of the published release tag.",
+          "earliest_release_claimed": false,
+          "verified_at": "2026-10-30T17:28:03+00:00"
+        }
+      ],
+      "source_sha256": "9c55a62e68301ea2854b559aab750998e4a9a5abd31ccb44b4d8519d93fdf102"
+    },
+    {
+      "issue_number": 9327,
+      "reported_versions": [
+        "0.22.3"
+      ],
+      "reported_version_notes": "Version(s) reported in the original issue environment; not a first-affected boundary.",
+      "assessment": "confirmed_bug",
+      "assessment_notes": "AQC computes an invalid real fractional power of a negative determinant and emits a circuit that does not approximate the target unitary.",
+      "resolution_notes": "Merged fix #9331 is verified in qiskit-terra 0.23.0. An earlier maintenance-branch fix is not asserted.",
+      "assessment_sources": [],
+      "verified_fixed_releases": [
+        {
+          "version": "0.23.0",
+          "distribution": "qiskit-terra",
+          "original_pull_request": 9331,
+          "pull_request": 9331,
+          "pull_request_url": "https://github.com/Qiskit/qiskit/pull/9331",
+          "merge_commit": "b4268b9afb91234b5389a11448e23299377ccaa4",
+          "merged_at": "2023-01-13T21:38:31Z",
+          "release_url": "https://github.com/Qiskit/qiskit/releases/tag/0.23.0",
+          "release_published_at": "2023-01-26T21:24:47Z",
+          "ancestry": {
+            "ahead_by": 45,
+            "base_commit": "b4268b9afb91234b5389a11448e23299377ccaa4",
+            "behind_by": 0,
+            "html_url": "https://github.com/Qiskit/qiskit/compare/b4268b9afb91234b5389a11448e23299377ccaa4...0.23.0",
+            "merge_base_commit": "b4268b9afb91234b5389a11448e23299377ccaa4",
+            "status": "ahead"
+          },
+          "verification_method": "Fix merge commit is an ancestor of the published release tag.",
+          "earliest_release_claimed": false,
+          "verified_at": "2026-10-30T17:28:03+00:00"
+        }
+      ],
+      "source_sha256": "cc8e33c80c59085f62877c76d5bbb5b3563fe693eb033dd60c260b464e5db50e"
+    },
+    {
+      "issue_number": 5666,
+      "reported_versions": [],
+      "reported_version_notes": "The original environment says 'master', with no numerical Qiskit Terra version or commit.",
+      "assessment": "mixed_report",
+      "assessment_notes": "The resolving discussion says case 1 (register ordering) is not a bug. Case 2 reports incorrect Boolean OR synthesis. Both original examples are retained, without presenting the first as a confirmed bug.",
+      "resolution_notes": "Merged #5830 is linked as resolving the issue and verified in qiskit-terra 0.17.0.",
+      "assessment_sources": [
+        "https://github.com/Qiskit/qiskit/issues/5666#issuecomment-784192665"
+      ],
+      "verified_fixed_releases": [
+        {
+          "version": "0.17.0",
+          "distribution": "qiskit-terra",
+          "original_pull_request": 5830,
+          "pull_request": 5830,
+          "pull_request_url": "https://github.com/Qiskit/qiskit/pull/5830",
+          "merge_commit": "674a6e28984eefc74018acf881fd3aff9db19fc1",
+          "merged_at": "2021-03-31T18:11:32Z",
+          "release_url": "https://github.com/Qiskit/qiskit/releases/tag/0.17.0",
+          "release_published_at": "2021-04-01T15:39:11Z",
+          "ancestry": {
+            "ahead_by": 9,
+            "base_commit": "674a6e28984eefc74018acf881fd3aff9db19fc1",
+            "behind_by": 0,
+            "html_url": "https://github.com/Qiskit/qiskit/compare/674a6e28984eefc74018acf881fd3aff9db19fc1...0.17.0",
+            "merge_base_commit": "674a6e28984eefc74018acf881fd3aff9db19fc1",
+            "status": "ahead"
+          },
+          "verification_method": "Fix merge commit is an ancestor of the published release tag.",
+          "earliest_release_claimed": false,
+          "verified_at": "2026-10-30T17:28:03+00:00"
+        }
+      ],
+      "source_sha256": "0f423e34f071329c3e6aabff0573c34b19bf2d89ec3381b9f3449b61820edcf2"
+    },
+    {
+      "issue_number": 5453,
+      "reported_versions": [
+        "0.16.1"
+      ],
+      "reported_version_notes": "Version(s) reported in the original issue environment; not a first-affected boundary.",
+      "assessment": "confirmed_bug",
+      "assessment_notes": "Diagonal synthesis loses a global phase that becomes relative when controlled, producing a different statevector than equivalent circuits.",
+      "resolution_notes": "Merged fix #5474 is verified in qiskit-terra 0.17.0. An earlier maintenance-branch fix is not asserted.",
+      "assessment_sources": [],
+      "verified_fixed_releases": [
+        {
+          "version": "0.17.0",
+          "distribution": "qiskit-terra",
+          "original_pull_request": 5474,
+          "pull_request": 5474,
+          "pull_request_url": "https://github.com/Qiskit/qiskit/pull/5474",
+          "merge_commit": "e98d4567c07a1827f0e6b78fa1caf0e668c486df",
+          "merged_at": "2021-01-19T17:10:31Z",
+          "release_url": "https://github.com/Qiskit/qiskit/releases/tag/0.17.0",
+          "release_published_at": "2021-04-01T15:39:11Z",
+          "ancestry": {
+            "ahead_by": 201,
+            "base_commit": "e98d4567c07a1827f0e6b78fa1caf0e668c486df",
+            "behind_by": 0,
+            "html_url": "https://github.com/Qiskit/qiskit/compare/e98d4567c07a1827f0e6b78fa1caf0e668c486df...0.17.0",
+            "merge_base_commit": "e98d4567c07a1827f0e6b78fa1caf0e668c486df",
+            "status": "ahead"
+          },
+          "verification_method": "Fix merge commit is an ancestor of the published release tag.",
+          "earliest_release_claimed": false,
+          "verified_at": "2026-10-30T17:28:03+00:00"
+        }
+      ],
+      "source_sha256": "ff86e096b8b89445057bc8ce6aa263aeed50a01973f62a9189b1ef16e416b59a"
+    },
+    {
+      "issue_number": 6134,
+      "reported_versions": [],
+      "reported_version_notes": "The original environment reports master at commit 49baa6ee5222bc497951423afa0fc7cbdb434702, not a numerical Terra release.",
+      "assessment": "confirmed_bug",
+      "assessment_notes": "Nested unrolling drops global phase before controlling a Hamiltonian circuit. The reference is the equivalent controlled exponentiated UnitaryGate.",
+      "resolution_notes": "Merged Unroller fix #6155 is verified in qiskit-terra 0.18.0. An earlier maintenance-branch fix is not asserted.",
+      "assessment_sources": [],
+      "verified_fixed_releases": [
+        {
+          "version": "0.18.0",
+          "distribution": "qiskit-terra",
+          "original_pull_request": 6155,
+          "pull_request": 6155,
+          "pull_request_url": "https://github.com/Qiskit/qiskit/pull/6155",
+          "merge_commit": "8c41a8d1466bcc7f3770c61aa8885cca81f10a06",
+          "merged_at": "2021-04-08T03:29:39Z",
+          "release_url": "https://github.com/Qiskit/qiskit/releases/tag/0.18.0",
+          "release_published_at": "2021-07-12T19:26:41Z",
+          "ancestry": {
+            "ahead_by": 243,
+            "base_commit": "8c41a8d1466bcc7f3770c61aa8885cca81f10a06",
+            "behind_by": 0,
+            "html_url": "https://github.com/Qiskit/qiskit/compare/8c41a8d1466bcc7f3770c61aa8885cca81f10a06...0.18.0",
+            "merge_base_commit": "8c41a8d1466bcc7f3770c61aa8885cca81f10a06",
+            "status": "ahead"
+          },
+          "verification_method": "Fix merge commit is an ancestor of the published release tag.",
+          "earliest_release_claimed": false,
+          "verified_at": "2026-10-30T17:28:03+00:00"
+        }
+      ],
+      "source_sha256": "17d5a8bb260c74a1bc859c5d1ad5e98e5b20d514d7b3a6ed08186b6441579421"
+    },
+    {
+      "issue_number": 7209,
+      "reported_versions": [
+        "0.18.3"
+      ],
+      "reported_version_notes": "Version(s) reported in the original issue environment; not a first-affected boundary.",
+      "assessment": "confirmed_bug",
+      "assessment_notes": "C3SXGate's definition implements SXdg.control(3), not its documented base operation SX.control(3).",
+      "resolution_notes": "Merged decomposition fix #7230 is verified in qiskit-terra 0.19.0.",
+      "assessment_sources": [],
+      "verified_fixed_releases": [
+        {
+          "version": "0.19.0",
+          "distribution": "qiskit-terra",
+          "original_pull_request": 7230,
+          "pull_request": 7230,
+          "pull_request_url": "https://github.com/Qiskit/qiskit/pull/7230",
+          "merge_commit": "49110f9c596fc509f189f38cfbdbb3100407bff2",
+          "merged_at": "2021-11-09T14:28:37Z",
+          "release_url": "https://github.com/Qiskit/qiskit/releases/tag/0.19.0",
+          "release_published_at": "2021-12-06T19:43:40Z",
+          "ancestry": {
+            "ahead_by": 57,
+            "base_commit": "49110f9c596fc509f189f38cfbdbb3100407bff2",
+            "behind_by": 0,
+            "html_url": "https://github.com/Qiskit/qiskit/compare/49110f9c596fc509f189f38cfbdbb3100407bff2...0.19.0",
+            "merge_base_commit": "49110f9c596fc509f189f38cfbdbb3100407bff2",
+            "status": "ahead"
+          },
+          "verification_method": "Fix merge commit is an ancestor of the published release tag.",
+          "earliest_release_claimed": false,
+          "verified_at": "2026-10-30T17:28:03+00:00"
+        }
+      ],
+      "source_sha256": "dd3204305682bb49d99308c412489b4685d4a6da67e05d5938233ba79b76031f"
+    },
+    {
+      "issue_number": 3433,
+      "reported_versions": [
+        "0.10.0"
+      ],
+      "reported_version_notes": "Version(s) reported in the original issue environment; not a first-affected boundary.",
+      "assessment": "confirmed_bug",
+      "assessment_notes": "A small-angle ZZ gadget loses its CX gates but retains its RZ. Expected behavior is to preserve the gadget or consistently approximate the entire gadget away.",
+      "resolution_notes": "Issue remains open. Discussion connects the behavior to inconsistent identity thresholds, but no specific released fix for this report is verified. Closed/unmerged #3658 is not a shipped fix.",
+      "assessment_sources": [],
+      "verified_fixed_releases": [],
+      "source_sha256": "245354c998d919b031655d83318aa443c30a0ffaa85eaa0274c1c1f69a8ff5de"
+    },
+    {
+      "issue_number": 86,
+      "reported_versions": [
+        "0.3.5"
+      ],
+      "reported_version_notes": "The original report names Qiskit SDK 0.3.5, predating the historical Qiskit/Terra distribution split.",
+      "assessment": "not_a_bug",
+      "assessment_notes": "The closing maintainer comment explicitly says this report is not a bug: the demonstrated output states differ only by a global phase. This entry is retained solely because it appeared in the initial list.",
+      "resolution_notes": "Closed as explained/expected behavior; no code fix or fixed version should be inferred. The earlier research summary overstated this as a relative-phase bug.",
+      "assessment_sources": [
+        "https://github.com/Qiskit/qiskit/issues/86#issuecomment-332406713"
+      ],
+      "verified_fixed_releases": [],
+      "source_sha256": "900be5349603814c7cb2af9449a07977e236a960d3075ebd72d506fbdfd140d4"
+    }
+  ]
+}

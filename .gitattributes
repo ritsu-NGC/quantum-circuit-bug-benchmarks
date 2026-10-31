@@ -1,0 +1,2 @@
+* text=auto eol=lf
+benchmarks/qiskit_*/README.md -text

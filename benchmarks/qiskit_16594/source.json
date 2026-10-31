@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "repository": "Qiskit/qiskit",
+  "retrieved_at": "2026-10-30T17:28:03+00:00",
+  "issue": {
+    "number": 16594,
+    "title": "CommutativeCancellation cancels an sxdg·sxdg pair that equals X, giving wrong results at optimization_level ≥ 2",
+    "html_url": "https://github.com/Qiskit/qiskit/issues/16594",
+    "body": "### Environment\n\n- **Qiskit version**: 2.5.0\n- **Python version**: 3.10\n- **Operating system**: Ubuntu\n\n### What is happening\n\nI was cross-checking a few simulators against each other and one circuit kept coming out different after transpiling. I traced it to `CommutativeCancellation`. It cancels two `sxdg` gates on the same qubit when there's a gate on another qubit between them, but `sxdg·sxdg` isn't identity, it's `X`. So the transpiled circuit computes something different from the input.\n\nIt happens at `optimization_level` 2 and 3 (where the pass runs). O0 and O1 are fine.\n\n### How can we reproduce the issue\n\nWith just the pass:\n\n```python\nfrom qiskit import QuantumCircuit\nfrom qiskit.transpiler import PassManager\nfrom qiskit.transpiler.passes import CommutativeCancellation\nfrom qiskit.quantum_info import Operator\n\nqc = QuantumCircuit(2)\nqc.sxdg(1)\nqc.sx(0)\nqc.sxdg(1)\n\nout = PassManager([CommutativeCancellation()]).run(qc)\nprint(out)                                # only sx(0) is left\nprint(Operator(qc).equiv(Operator(out)))  # False\n```\n\nAnd through the full transpiler, so you can see the measurement result change:\n\n```python\nfrom qiskit import QuantumCircuit, transpile\nfrom qiskit_aer import AerSimulator\n\nqc = QuantumCircuit(2, 2)\nqc.sxdg(1); qc.sx(0); qc.sxdg(1)\nqc.measure([0, 1], [0, 1])\n\nsim = AerSimulator()\nfor opt in (1, 3):\n    t = transpile(qc, basis_gates=[\"rz\", \"sx\", \"x\", \"cx\"], optimization_level=opt)\n    print(opt, sim.run(t, shots=2000).result().get_counts())\n# O1: qubit 1 is always 1  (correct, since sxdg·sxdg = X)\n# O3: qubit 1 is always 0  (wrong)\n```\n\n### What should happen\n\nThe pair should fold to `X` (or be left alone), not vanish.\n\nLooks like the cause is in the pass itself: `_x_rotations` includes `sx` and `sxdg` (line 69 of `commutative_cancellation.py`) and two `sxdg` get treated as an inverse pair. They aren't — two `sxdg` make `Rx(-π)`, which is `X` up to a global phase, not identity. The adjacent case (two `sxdg` with nothing in between) is folded correctly; the problem only shows up when a gate on another qubit sits between them.\n\nI found this with a differential fuzzer I've been building ([cforge-fuzz](https://github.com/cleitonaugusto/CleitonForge)). Happy to share more minimal cases if that helps.\n",
+    "state": "closed",
+    "state_reason": "completed",
+    "created_at": "2026-07-16T18:50:51Z",
+    "updated_at": "2026-07-20T09:56:41Z",
+    "closed_at": "2026-07-20T09:56:41Z",
+    "author": "cleitonaugusto"
+  },
+  "comments": [
+    {
+      "id": 4995867326,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/16594#issuecomment-4995867326",
+      "body": "Thanks for the report, we can get this fixed.  The actual root cause is quite different (all this code is in Rust), and commutative cancellation _is_ calculating the necessary rotation angle correctly, it just fails to correctly synthesise that into gates when the combined X rotation is a negative odd multiple of $\\pi/2$ and `sx` appears to be a supported gate.",
+      "created_at": "2026-07-16T19:37:12Z",
+      "updated_at": "2026-07-16T19:37:12Z",
+      "author": "jakelishman"
+    },
+    {
+      "id": 4997966557,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/16594#issuecomment-4997966557",
+      "body": "Thanks for the quick triage, and for correcting me on the cause. I was reading the Python and guessed wrong.\n\nI looked at it a bit more. Two things that might matter for the fix.\n\nIt's not only the odd multiples. Forcing an exact combined rotation with a pair of `rx(θ/2)` gates:\n\n```python\nimport numpy as np\nfrom qiskit import QuantumCircuit\nfrom qiskit.transpiler import PassManager\nfrom qiskit.transpiler.passes import CommutativeCancellation\nfrom qiskit.quantum_info import Operator\n\nfor k in range(-8, 9):\n    if k == 0:\n        continue\n    theta = k * np.pi / 2\n    qc = QuantumCircuit(2)\n    qc.rx(theta / 2, 1)\n    qc.sx(0)\n    qc.rx(theta / 2, 1)\n    out = PassManager([CommutativeCancellation()]).run(qc)\n    emitted = [i.operation.name for i in out.data if out.find_bit(i.qubits[0]).index == 1]\n    equiv = Operator(qc).equiv(Operator(out))\n    print(f\"{k:+3d} * pi/2   emitted: {' '.join(emitted) or '(nothing)':<12} equiv: {equiv}\")\n```\n\nOn 2.5.0:\n\n```\n -8 * pi/2   emitted: (nothing)    equiv: True\n -7 * pi/2   emitted: (nothing)    equiv: False\n -6 * pi/2   emitted: (nothing)    equiv: False\n -5 * pi/2   emitted: (nothing)    equiv: False\n -4 * pi/2   emitted: (nothing)    equiv: True\n -3 * pi/2   emitted: (nothing)    equiv: False\n -2 * pi/2   emitted: (nothing)    equiv: False\n -1 * pi/2   emitted: (nothing)    equiv: False\n +1 * pi/2   emitted: sx           equiv: True\n +2 * pi/2   emitted: sx sx        equiv: True\n +3 * pi/2   emitted: sx sx sx     equiv: True\n +4 * pi/2   emitted: (nothing)    equiv: True\n +5 * pi/2   emitted: sx           equiv: True\n +6 * pi/2   emitted: sx sx        equiv: True\n +7 * pi/2   emitted: sx sx sx     equiv: True\n +8 * pi/2   emitted: (nothing)    equiv: True\n```\n\nSo -π and -3π break too (k = -2 and -6), not just the odd ones. -2π and -4π only pass because emitting nothing is correct there anyway. The condition looks more like \"negative multiple of π/2 that is not a multiple of 2π\". A fix that only covers the odd cases would leave those two broken.\n\nIt's also not specific to `sxdg`. There is no `sx` or `sxdg` on that qubit above, only `rx`. So the 3-gate case I posted originally is one instance of something wider.\n\nOne more thing, but this is a guess. The positive side reduces correctly, +5·π/2 comes back as a single `sx`. The negative side emits nothing at every angle. That would fit a signed remainder feeding a range that ends up empty when it's negative. I can't see the Rust from here, and I already got the cause wrong once, so I'm not going to claim it.\n\nThe same script on 2.4.0 is clean at all 16 angles. It emits `rx` and never takes the `sx` path. Maybe useful for bounding the regression.\n",
+      "created_at": "2026-07-17T01:01:41Z",
+      "updated_at": "2026-07-17T01:02:59Z",
+      "author": "cleitonaugusto"
+    },
+    {
+      "id": 4999294016,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/16594#issuecomment-4999294016",
+      "body": "One correction to my original report, sorry. I said the problem only shows up when there is a gate on another qubit sitting between the two sxdg. That is wrong. It happens on a single qubit with nothing else in the circuit at all:\n\n```python\nfrom qiskit import QuantumCircuit\nfrom qiskit.transpiler import PassManager\nfrom qiskit.transpiler.passes import CommutativeCancellation\nfrom qiskit.quantum_info import Operator\n\nqc = QuantumCircuit(1)\nqc.sxdg(0)\nqc.sxdg(0)\nqc.sx(0)\n\nout = PassManager([CommutativeCancellation()]).run(qc)\nprint(out.count_ops())                     # OrderedDict()  everything is gone\nprint(Operator(qc).equiv(Operator(out)))   # False\n```\n\nThat combines to -pi/2, so one `sxdg` should be left.\n\nI went through every sx/sxdg sequence up to length 5 on one qubit. 22 of the 62 break, none at length 1 or 2, then 3 of 8 at length 3, 4 of 16 at length 4, and 15 of 32 at length 5.\n\nThe ones that break all mix `sx` and `sxdg` and add up to something negative. A run of just one kind comes out fine, so `sxdg sxdg sxdg` is correct at -3pi/2, but `sx sxdg sxdg sxdg sxdg` drops everything at the same -3pi/2. Two gates are always fine too, `sxdg sxdg` comes back as `rx` and is correct.\n\nI'm mentioning it because my description would point a fix at the interleaved case, and the single qubit one would still be there afterwards.\n",
+      "created_at": "2026-07-17T05:28:15Z",
+      "updated_at": "2026-07-17T05:28:15Z",
+      "author": "cleitonaugusto"
+    },
+    {
+      "id": 4999799585,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/16594#issuecomment-4999799585",
+      "body": "Yeah, I was just simplifying to target your particular example rather than dumping out every reason - there's quite a bit of faulty logic all around the X resynthesis, and some of it is compounded by the strange logic surrounding how the pass calculates the \"supported instructions\" if you don't explicitly specify them.",
+      "created_at": "2026-07-17T06:43:06Z",
+      "updated_at": "2026-07-17T06:43:06Z",
+      "author": "jakelishman"
+    },
+    {
+      "id": 5004848704,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/16594#issuecomment-5004848704",
+      "body": "I think I found the line. In `crates/transpiler/src/passes/commutation_cancellation.rs`, the sx synthesis branch:\n\n```rust\nlet num_sx = (total_angle / FRAC_PI_2).round();\ntotal_phase -= FRAC_PI_4 * num_sx;\nfor _ in 0..(num_sx as i64) % 4 {\n    dag.insert_1q_on_incoming_qubit((StandardGate::SX, &[]), cancel_set[0]);\n}\n```\n\nFor a negative rotation `num_sx` is negative, and `%` keeps the sign of the dividend, so `-1 % 4` is `-1`, not `3`. That makes the loop `0..-1`, which is an empty range in Rust, so no `sx` is emitted and the rotation is dropped.\n\n`num_sx.rem_euclid(4)` gives `0..3` for either sign. It is exact here because `SX` to the 4th is the identity, so reducing the count mod 4 does not change the operator, and the phase correction on the line above already uses the true `num_sx`, so it stays right.\n\nThat also matches why only the mixed case broke. `sx_supported` is true when the circuit contains an `sx`, so a pure `sxdg` run has no `sx`, takes the `rx` path instead, and was always fine.\n",
+      "created_at": "2026-07-17T15:31:36Z",
+      "updated_at": "2026-07-17T15:31:36Z",
+      "author": "cleitonaugusto"
+    },
+    {
+      "id": 5005927516,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/16594#issuecomment-5005927516",
+      "body": "Yes - there's a PR (two, actually) linked above your comment that changes that line.  There's actually larger inefficiencies in that pass, and the resynthesis logic is quite suboptimal, but that line is the backportable change, and we have a new commutation analysis in a completely separate pass that will (hopefully) supersede this whole logic in the future.",
+      "created_at": "2026-07-17T17:46:36Z",
+      "updated_at": "2026-07-17T17:46:36Z",
+      "author": "jakelishman"
+    }
+  ],
+  "state_events": [
+    {
+      "event": "closed",
+      "created_at": "2026-07-20T09:56:41Z",
+      "commit_id": null,
+      "commit_url": null,
+      "actor": "alexanderivrii"
+    }
+  ],
+  "integrity": {
+    "body_sha256": "b96563cb254ce74a2448d76aeef8fc311af458dacf0a2177cf59c4a48415ea22",
+    "comment_body_sha256": {
+      "4995867326": "7eb86389483f9ededdd1af88ef03ae7f4e1fc1da97cfaddab42cb7cbe0b3d8a7",
+      "4997966557": "2ef5d00964cf52298507f0eedcb7529aeb30f869988bbfc3fc1101b578bb0865",
+      "4999294016": "c527e1889d2587c4ae820d5cfc59148553819308e6d46f0c5740f499b27eccc2",
+      "4999799585": "21d8e78128968377001411efbd7eb82dc15931ec6e05ed55dd9ed60057abfe31",
+      "5004848704": "a0d01850a8b3debf939cffcd38192c97b1c8961c620bd230ed791c44ef75f9fd",
+      "5005927516": "a59941f2dcfac8a73c799fbce39d1fd7de363f9b377191ce2d049fc0621d3be5"
+    },
+    "expected_comment_count": 6
+  }
+}

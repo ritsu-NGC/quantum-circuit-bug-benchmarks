@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "repository": "Qiskit/qiskit",
+  "retrieved_at": "2026-10-30T17:28:03+00:00",
+  "issue": {
+    "number": 13547,
+    "title": "Incorrect transpilation with RY gate with a small angle",
+    "html_url": "https://github.com/Qiskit/qiskit/issues/13547",
+    "body": "### Environment\n\n- **Qiskit version**: 1.3.0, main\n- **Python version**: 3.12.8\n- **Operating system**: macOS 15.1.1\n\n\n### What is happening?\n\nTranspilation with optimization level 2 and 3 results in a incorrect circuit for circuits with RY gate with a small angle.\n\nNote that the following code does not have issue with 1.2.4.\n\n### How can we reproduce the issue?\n\n```python\nfrom qiskit import QuantumCircuit, generate_preset_pass_manager, __version__\nfrom qiskit.quantum_info import Operator\n\nqc = QuantumCircuit(2)\nqc.h(0)\nqc.cx(0, 1)\nqc.ry(1e-6, 1)\nqc.cx(0, 1)\n\npm = generate_preset_pass_manager(optimization_level=2)\ntqc = pm.run(qc)\n\nprint(__version__)\nprint(qc)\nprint(tqc)\n\nprint(\"equivalent?\", Operator(qc).equiv(tqc))\n```\n\n```\n2.0.0.dev0+841cb29\n     ┌───┐\nq_0: ┤ H ├──■─────────────────■──\n     └───┘┌─┴─┐┌───────────┐┌─┴─┐\nq_1: ─────┤ X ├┤ Ry(1e-06) ├┤ X ├\n          └───┘└───────────┘└───┘\n         ┌───┐\nq_0: ────┤ H ├────\n     ┌───┴───┴───┐\nq_1: ┤ Ry(1e-06) ├\n     └───────────┘\nequivalent? False\n```\n\n```\n1.3.0\n     ┌───┐\nq_0: ┤ H ├──■─────────────────■──\n     └───┘┌─┴─┐┌───────────┐┌─┴─┐\nq_1: ─────┤ X ├┤ Ry(1e-06) ├┤ X ├\n          └───┘└───────────┘└───┘\n         ┌───┐\nq_0: ────┤ H ├────\n     ┌───┴───┴───┐\nq_1: ┤ Ry(1e-06) ├\n     └───────────┘\nequivalent? False\n```\n\n```\n1.2.4\n     ┌───┐\nq_0: ┤ H ├──■─────────────────■──\n     └───┘┌─┴─┐┌───────────┐┌─┴─┐\nq_1: ─────┤ X ├┤ Ry(1e-06) ├┤ X ├\n          └───┘└───────────┘└───┘\n     ┌───┐\nq_0: ┤ H ├──■─────────────────■──\n     └───┘┌─┴─┐┌───────────┐┌─┴─┐\nq_1: ─────┤ X ├┤ Ry(1e-06) ├┤ X ├\n          └───┘└───────────┘└───┘\nequivalent? True\n```\n\n### What should happen?\n\nThe transpiled circuit should be same as the input circuit as 1.2.4 does.\n\n\n### Another example\n\nThe following example fails with 1.2.4, 1.3.0, and main branch probably due to a similar reason.\n```python\nfrom qiskit import QuantumCircuit, generate_preset_pass_manager, __version__\nfrom qiskit.circuit.library import PauliEvolutionGate\nfrom qiskit.quantum_info import SparsePauliOp, Operator\n\nqc = QuantumCircuit(2)\nop = SparsePauliOp([\"XX\"], coeffs=[1])\nevo = PauliEvolutionGate(op, 1e-6)\nqc.append(evo, qargs=qc.qregs[0])\n\npm = generate_preset_pass_manager(optimization_level=2, basis_gates=[\"rz\", \"cx\", \"sx\", \"x\"])\ntqc = pm.run(qc)\n\nprint(__version__)\nprint(qc)\nprint(tqc)\n\nprint(\"equivalent?\", Operator(qc).equiv(tqc))\n```\n\n```\n2.0.0.dev0+841cb29\n     ┌─────────────────────┐\nq_0: ┤0                    ├\n     │  exp(-it XX)(1e-06) │\nq_1: ┤1                    ├\n     └─────────────────────┘\nglobal phase: π/2\n\nq_0: ─────────────────────────────────────────────────\n     ┌─────────┐┌────┐┌─────────────┐┌────┐┌─────────┐\nq_1: ┤ Rz(π/2) ├┤ √X ├┤ Rz(-3.1416) ├┤ √X ├┤ Rz(π/2) ├\n     └─────────┘└────┘└─────────────┘└────┘└─────────┘\nequivalent? False\n```\n\n```\n1.2.4\n     ┌─────────────────────┐\nq_0: ┤0                    ├\n     │  exp(-it XX)(1e-06) │\nq_1: ┤1                    ├\n     └─────────────────────┘\nglobal phase: π/2\n\nq_0: ─────────────────────────────────────────────────\n     ┌─────────┐┌────┐┌─────────────┐┌────┐┌─────────┐\nq_1: ┤ Rz(π/2) ├┤ √X ├┤ Rz(-3.1416) ├┤ √X ├┤ Rz(π/2) ├\n     └─────────┘└────┘└─────────────┘└────┘└─────────┘\nequivalent? False\n```\n\n### Any suggestions?\n\n_No response_",
+    "state": "closed",
+    "state_reason": "completed",
+    "created_at": "2024-12-10T13:58:53Z",
+    "updated_at": "2025-03-06T00:34:44Z",
+    "closed_at": "2025-03-06T00:34:43Z",
+    "author": "t-imamichi"
+  },
+  "comments": [
+    {
+      "id": 2531864957,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/13547#issuecomment-2531864957",
+      "body": "The true problem here is that cutoff tolerances are handled differently in different parts of Qiskit. For example, also on 1.2.4 a small enough angle will remove the CX gates (and the RY):\n```python\n     ┌───┐\nq_0: ┤ H ├──■─────────────────■──\n     └───┘┌─┴─┐┌───────────┐┌─┴─┐\nq_1: ─────┤ X ├┤ Ry(2e-08) ├┤ X ├\n          └───┘└───────────┘└───┘\nglobal phase: 0\n     ┌──────────────┐\nq_0: ┤ U3(π/2,0,-π) ├\n     └──────────────┘\nq_1: ────────────────\n\n```\nbut this seems to match the tolerance in `Operator.equiv`, since this prints\n```\nequivalent? True\n```\n\nWe need to ensure that our processes use the same tolerance algorithm. I'm thinking of `CommutationAnalysis/Checker`, `UnitarySynthesis`, `RemoveIdentityEquivalent` and `Operator.equiv`, but maybe there are also others. From offline discussions, doing what `UnitarySynthesis` and `RemoveIdentityEquivalent` do seems to be the best-motivated choice: consider a gate as the identity, if the process fidelity is below machine epsilon.",
+      "created_at": "2024-12-10T14:51:45Z",
+      "updated_at": "2024-12-10T14:51:45Z",
+      "author": "Cryoris"
+    },
+    {
+      "id": 2533523718,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/13547#issuecomment-2533523718",
+      "body": "Thank you for investigating this issue. The transpilation behavior change between 1.2.4 and 1.3.0 breaks our client code.\nCould you suggest me how to configure transpiler to behave in the same way as 1.2.4?",
+      "created_at": "2024-12-11T03:06:54Z",
+      "updated_at": "2024-12-11T03:06:54Z",
+      "author": "t-imamichi"
+    },
+    {
+      "id": 2535498276,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/13547#issuecomment-2535498276",
+      "body": "Unfortunately there's currently no way to directly adjust the threshold below which the commutation checker assumes anything commutes with a rotation `Ry(epsilon)`. There's two suboptimal workarounds: \n* you could either increase the tolerance in `Operator.equiv`, or\n* if you directly set the angle to 1e-6 (or whatever the angle is) you could first build the circuit with parameters in the `Ry`, then transpile, and then bind the values. The commutation checker will then not assume that things commute.\n\nWe're working on a fix but I don't think it will make it for 1.3.1, which is scheduled tomorrow. ",
+      "created_at": "2024-12-11T10:45:55Z",
+      "updated_at": "2024-12-11T10:45:55Z",
+      "author": "Cryoris"
+    },
+    {
+      "id": 2536025757,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/13547#issuecomment-2536025757",
+      "body": "Thank you for your advice.",
+      "created_at": "2024-12-11T13:42:06Z",
+      "updated_at": "2024-12-11T13:42:06Z",
+      "author": "t-imamichi"
+    }
+  ],
+  "state_events": [
+    {
+      "event": "closed",
+      "created_at": "2025-03-06T00:34:44Z",
+      "commit_id": null,
+      "commit_url": null,
+      "actor": "mtreinish"
+    }
+  ],
+  "integrity": {
+    "body_sha256": "1ff4eef51fc6e9e0cd59adadadc786cc7a8bd74830c767b25533a282ecb0197f",
+    "comment_body_sha256": {
+      "2531864957": "6126abad162d8c157d79159bacac6c0188e06c1fc7e67e222c0ce1cbbd05f383",
+      "2533523718": "b3cb480691f369a1225751ae40843e9adb67136e3b4a4522cc7c5ea23d7d976f",
+      "2535498276": "e2030ebc578393534ad91452501ce7476d75d1ecce202762dd1b5305f0be5e72",
+      "2536025757": "b9a76ac6921233cc3d888e341beaee4c1e90fe8712165fe562cdde448647a57f"
+    },
+    "expected_comment_count": 4
+  }
+}

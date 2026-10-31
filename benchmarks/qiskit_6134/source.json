@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "repository": "Qiskit/qiskit",
+  "retrieved_at": "2026-10-30T17:28:03+00:00",
+  "issue": {
+    "number": 6134,
+    "title": "Controlled HamiltonianGate seems to be wrong",
+    "html_url": "https://github.com/Qiskit/qiskit/issues/6134",
+    "body": "<!-- ⚠️ If you do not respect this template, your issue will be closed -->\r\n<!-- ⚠️ Make sure to browse the opened and closed issues -->\r\n\r\n### Information\r\n\r\n- **Qiskit Terra version**: master @ 49baa6ee5222bc497951423afa0fc7cbdb434702\r\n- **Python version**: 3.7.9\r\n- **Operating system**: macOS Big Sur\r\n\r\n### What is the current behavior?\r\n\r\nControlled the `HamiltonianGate` seems to produce wrong results, whereas manually exponentiating and then using the `UnitaryGate` works fine.\r\n\r\n### Steps to reproduce the problem\r\n\r\n```python\r\nimport numpy as np\r\nimport scipy as sc\r\n\r\nfrom qiskit import QuantumCircuit\r\nfrom qiskit.quantum_info import Operator\r\n\r\nnp.set_printoptions(precision=2)\r\n\r\nmatrix = np.array([[2, 1], [1, 2]])\r\nevolved = sc.linalg.expm(1j * matrix)\r\n\r\nu = QuantumCircuit(1)\r\nu.unitary(evolved, [0])\r\n\r\nh = QuantumCircuit(1)\r\nh.hamiltonian(matrix, -1, [0])\r\n\r\nprint('Unitary of e^(-matrix)')\r\nprint(Operator(u).data)\r\n\r\nprint('Hamiltonian of matrix')\r\nprint(Operator(h).data)\r\n\r\nprint('Controlled unitary of e^(-matrix)')\r\n# so that the matrix of the controlled gate uses the \"physics order\", reverse bits\r\nprint(Operator(u.control().reverse_bits()).data)  \r\n\r\nprint('Controlled hamiltonian of matrix')\r\nprint(Operator(h.control().reverse_bits()).data)\r\n```\r\n\r\nThis yields:\r\n```\r\nUnitary of e^(-matrix)\r\n[[-0.22+0.49j -0.77-0.35j]\r\n [-0.77-0.35j -0.22+0.49j]]\r\nHamiltonian of matrix\r\n[[-0.22+0.49j -0.77-0.35j]\r\n [-0.77-0.35j -0.22+0.49j]]\r\nControlled unitary of e^(-matrix)\r\n[[ 1.  +0.j    0.  +0.j    0.  +0.j    0.  +0.j  ]\r\n [ 0.  +0.j    1.  +0.j    0.  +0.j    0.  +0.j  ]\r\n [ 0.  +0.j    0.  +0.j   -0.22+0.49j -0.77-0.35j]\r\n [ 0.  +0.j    0.  +0.j   -0.77-0.35j -0.22+0.49j]]\r\nControlled hamiltonian of matrix\r\n[[ 1.00e+00+0.00e+00j  0.00e+00+0.00e+00j  0.00e+00+0.00e+00j 0.00e+00+0.00e+00j]\r\n [ 0.00e+00+0.00e+00j  1.00e+00+0.00e+00j  0.00e+00+0.00e+00j 0.00e+00+0.00e+00j]\r\n [ 0.00e+00+0.00e+00j  0.00e+00+0.00e+00j  5.40e-01+0.00e+00j 1.55e-16+8.41e-01j]\r\n [ 0.00e+00+0.00e+00j  0.00e+00+0.00e+00j -1.35e-16+8.41e-01j 5.40e-01-1.32e-16j]]\r\n```\r\n\r\n\r\n### What is the expected behavior?\r\n\r\nControlling the `HamiltonianGate` (and reversing bits) should produce this matrix:\r\n```\r\n[[ 1.  +0.j    0.  +0.j    0.  +0.j    0.  +0.j  ]\r\n [ 0.  +0.j    1.  +0.j    0.  +0.j    0.  +0.j  ]\r\n [ 0.  +0.j    0.  +0.j   -0.22+0.49j -0.77-0.35j]\r\n [ 0.  +0.j    0.  +0.j   -0.77-0.35j -0.22+0.49j]]\r\n ```\r\n\r\n### Suggested solutions\r\n\r\nCheck what's going on in `HamiltonianGate.control`, maybe it's a relative phase that's introduced.\r\n",
+    "state": "closed",
+    "state_reason": "completed",
+    "created_at": "2021-04-01T15:57:46Z",
+    "updated_at": "2021-04-08T03:29:39Z",
+    "closed_at": "2021-04-08T03:29:39Z",
+    "author": "Cryoris"
+  },
+  "comments": [
+    {
+      "id": 812820047,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/6134#issuecomment-812820047",
+      "body": "@Cryoris Under `extensions/hamiltonian_gate.py`, I don't see a `.control` method for the `HamiltonianGate` class. Any ideas where I can look into this?",
+      "created_at": "2021-04-03T06:19:19Z",
+      "updated_at": "2021-04-03T06:19:19Z",
+      "author": "paniash"
+    },
+    {
+      "id": 812930420,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/6134#issuecomment-812930420",
+      "body": "@paniash The `control` method is implemented in the parent `Gate` class.",
+      "created_at": "2021-04-03T21:51:43Z",
+      "updated_at": "2021-04-03T21:51:43Z",
+      "author": "ewinston"
+    },
+    {
+      "id": 812931995,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/6134#issuecomment-812931995",
+      "body": "I noticed that when you create a HamiltonianGate directly it looks ok,\r\n```python\r\n        evo = scipy.linalg.expm(-1j * hami * tdelta)\r\n        cevo = _compute_control_matrix(evo, 1)\r\n        print('-'*5 + 'hamiltonian')\r\n        print(hami)\r\n        print('-'*5 + 'evolution operator')\r\n        print(evo)\r\n        print('-'*5 + 'controlled evolution operator')        \r\n        print(cevo)\r\n\r\n\r\n        print('-'*5 + 'HamiltonianGate as QuantumCircuit')\r\n        hami_circ = QuantumCircuit(1, name='hami_circ')\r\n        hami_circ.hamiltonian(hami, -1, [0])\r\n        chami_circ = hami_circ.control()\r\n        print(Operator(hami_circ).data)\r\n        print(Operator(chami_circ).data)\r\n\r\n        print('-'*5 + 'HamiltonianGate as Gate appended to QuantumCircuit')\r\n        hami_gate = HamiltonianGate(hami, tdelta)\r\n        chami_gate = hami_gate.control()\r\n        chami_circuit = QuantumCircuit(2, name='hami_circ')\r\n        chami_circuit.append(chami_gate, [0, 1])\r\n        print(Operator(chami_gate).data)\r\n        print(Operator(chami_circuit).data)   \r\n```\r\nprints;\r\n```\r\n-----hamiltonian\r\n[[2 1]\r\n [1 2]]\r\n-----evolution operator\r\n[[-0.22-0.49j -0.77+0.35j]\r\n [-0.77+0.35j -0.22-0.49j]]\r\n-----controlled evolution operator\r\n[[ 1.  +0.j    0.  +0.j    0.  +0.j    0.  +0.j  ]\r\n [ 0.  +0.j   -0.22-0.49j  0.  +0.j   -0.77+0.35j]\r\n [ 0.  +0.j    0.  +0.j    1.  +0.j    0.  +0.j  ]\r\n [ 0.  +0.j   -0.77+0.35j  0.  +0.j   -0.22-0.49j]]\r\n\r\n-----HamiltonianGate as QuantumCircuit\r\nhami_circ\r\n                              \r\ncontrol_0: ─────────■─────────\r\n           ┌────────┴────────┐\r\n target_0: ┤ U(2,π/2,3π/2,0) ├\r\n           └─────────────────┘\r\n[[-0.22+0.49j -0.77-0.35j]\r\n [-0.77-0.35j -0.22+0.49j]]\r\n[[1.  +0.j   0.  +0.j   0.  +0.j   0.  +0.j  ]\r\n [0.  +0.j   0.54+0.j   0.  +0.j   0.  +0.84j]\r\n [0.  +0.j   0.  +0.j   1.  +0.j   0.  +0.j  ]\r\n [0.  +0.j   0.  +0.84j 0.  +0.j   0.54-0.j  ]]\r\n\r\n-----HamiltonianGate as Gate appended to QuantumCircuit\r\ngate hamiltonian has phase of -1.9999999999999998\r\nhamiltonian\r\n                              ┌───────┐\r\ncontrol_0: ─────────■─────────┤ P(-2) ├\r\n           ┌────────┴────────┐└───────┘\r\n target_0: ┤ U(2,3π/2,π/2,0) ├─────────\r\n           └─────────────────┘         \r\n[[ 1.  +0.j    0.  +0.j    0.  +0.j    0.  +0.j  ]\r\n [ 0.  +0.j   -0.22-0.49j  0.  +0.j   -0.77+0.35j]\r\n [ 0.  +0.j    0.  +0.j    1.  +0.j    0.  +0.j  ]\r\n [ 0.  +0.j   -0.77+0.35j  0.  +0.j   -0.22-0.49j]]\r\n[[ 1.  +0.j    0.  +0.j    0.  +0.j    0.  +0.j  ]\r\n [ 0.  +0.j   -0.22-0.49j  0.  +0.j   -0.77+0.35j]\r\n [ 0.  +0.j    0.  +0.j    1.  +0.j    0.  +0.j  ]\r\n [ 0.  +0.j   -0.77+0.35j  0.  +0.j   -0.22-0.49j]]\r\n",
+      "created_at": "2021-04-03T22:07:04Z",
+      "updated_at": "2021-04-03T22:07:04Z",
+      "author": "ewinston"
+    },
+    {
+      "id": 812968549,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/6134#issuecomment-812968549",
+      "body": "This may actually be an issue with the Unroller preserving global phase;\r\n```python\r\n        from qiskit.transpiler.passes.basis import Unroller\r\n        from qiskit.transpiler import PassManager\r\n        hami = np.array([[2, 1], [1, 2]])\r\n        hami_gate = HamiltonianGate(hami, 1)\r\n        hami_circ = QuantumCircuit(1)\r\n        hami_circ.append(hami_gate, [0])\r\n        pm = PassManager()\r\n        pm.append(Unroller(['u']))\r\n        unrolled_hami_circ = pm.run(hami_circ)\r\n        np.set_printoptions(precision=2, linewidth=200, suppress=True)\r\n        print(Operator(hami_circ).data)\r\n        print(Operator(unrolled_hami_circ).data)        \r\n```\r\nyields,\r\n```\r\n[[-0.22-0.49j -0.77+0.35j]\r\n [-0.77+0.35j -0.22-0.49j]]\r\n\r\n[[ 0.54+0.j   -0.  -0.84j]\r\n [-0.  -0.84j  0.54-0.j  ]]\r\n```",
+      "created_at": "2021-04-04T04:17:24Z",
+      "updated_at": "2021-04-04T04:17:24Z",
+      "author": "ewinston"
+    }
+  ],
+  "state_events": [
+    {
+      "event": "closed",
+      "created_at": "2021-04-08T03:29:39Z",
+      "commit_id": null,
+      "commit_url": null,
+      "actor": "mergify[bot]"
+    }
+  ],
+  "integrity": {
+    "body_sha256": "3388907d397883d5d0d3cae3b01079a7f6675936562770ee7f12d3a53937f3b8",
+    "comment_body_sha256": {
+      "812820047": "f561b21a1a4b6e00c95f5b433f66e94f8a00b6929844b49a88a3700af9fc2e6c",
+      "812930420": "6dca68e2cec0f3631034e8f526d4925d0152b9118583038550275302a81680af",
+      "812931995": "1eed5a7a3bfe7d9ce36e1ae2dad1b24dcbaea2cd5ff98d3b0172d2117142eabe",
+      "812968549": "6bc82a8d20b3830bc7ec4b9fb5afee9ed384d76bbbbeb72944d068c1092b33d7"
+    },
+    "expected_comment_count": 4
+  }
+}

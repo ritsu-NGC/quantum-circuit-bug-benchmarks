@@ -1,0 +1,20 @@
+Third-party content
+===================
+
+Original project tooling, metadata curation, and documentation are provided
+under the MIT license in LICENSE.
+
+The original issue posts, comments, code snippets, and linked attachments
+attributed to Qiskit/qiskit are third-party contributions. Their inclusion
+does not relicense them under this project's MIT license or assert ownership.
+Their authors retain their rights, subject to the applicable upstream terms.
+Each benchmark identifies the original issue, author, timestamps, comment
+permalinks, and source repository. Consult those sources for applicable terms
+before redistributing or reusing third-party material.
+
+Qiskit's source code is maintained at https://github.com/Qiskit/qiskit and
+is licensed upstream under Apache-2.0. Do not assume that this source-code
+license independently establishes the license of every issue contribution.
+
+Attachments are linked from the original text, not downloaded or relicensed.
+This project is not affiliated with or endorsed by the Qiskit project.

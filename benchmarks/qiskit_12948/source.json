@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "repository": "Qiskit/qiskit",
+  "retrieved_at": "2026-10-30T17:28:03+00:00",
+  "issue": {
+    "number": 12948,
+    "title": "Transpile Optimization Level 2 and 3 Give Incorrect Circuits",
+    "html_url": "https://github.com/Qiskit/qiskit/issues/12948",
+    "body": "### Environment\r\n\r\n- **Qiskit 1.1.1**: \r\n- **Python 3.12.4**: \r\n- **Windows 10**: \r\n\r\n\r\n### What is happening?\r\n\r\nI think Transpile with optimization level 2 and level 3 is bugged; transpile with optimization level 0 or 1 is correct. In the given example, I create a circuit that prepares the target state. The generated circuits' output has unit fidelity with the target state when transpiled with optimization 0 and 1 but 0.387 fidelity with 2 and 3.\r\n\r\n### How can we reproduce the issue?\r\n\r\n```\r\nfrom qiskit import QuantumCircuit, transpile\r\nfrom qiskit.quantum_info import Statevector\r\nimport numpy as np\r\nfrom qiskit_aer import AerSimulator\r\n\r\ndef get_fidelity(state1, state2):\r\n    return abs(state1.conjugate().T @ state2) ** 2\r\n\r\ndef execute(circ, opt_level):\r\n    sim = AerSimulator()\r\n    basis_gates = [\"rx\", \"ry\", \"rz\", \"h\", \"cx\"]\r\n    circuit_tanspile = transpile(circ, basis_gates=basis_gates, optimization_level=opt_level)\r\n    circuit_tanspile.save_statevector(label=\"end\")\r\n    result = sim.run(circuit_tanspile).result()\r\n    return result.data(0)[\"end\"].data\r\n\r\nif __name__ == \"__main__\":\r\n    target=np.array([0j, (0.485587205735524-0.2600812815664197j), \r\n          0j, 0j, 0j, 0j, 0j, 0j, 0j, 0j, 0j, 0j, 0j, 0j, \r\n          0j, 0j, 0j, 0j, 0j, 0j, 0j, 0j, 0j, 0j, 0j, 0j, 0j, \r\n          0j, 0j, 0j, (-0.11865767727626089-0.28041030727622457j), \r\n          0j, 0j, 0j, 0j, 0j, 0j, 0j, 0j, 0j, 0j, 0j, \r\n          (0.24996770614905434+0.1064494710662403j), 0j, 0j, 0j, 0j,\r\n            0j, 0j, 0j, 0j, 0j, 0j, 0j, 0j, 0j, (0.0015310580114530382-0.34901642700045116j), \r\n            0j, 0j, 0j, 0j, 0j, 0j, 0j, 0j, 0j, 0j, 0j, 0j, 0j, 0j, 0j, 0j, 0j, 0j, 0j,\r\n              0j, 0j, 0j, 0j, 0j, 0j, 0j, 0j, (-0.023640084620894435-0.5198551844366773j),\r\n                0j, 0j, 0j, 0j, 0j, 0j, 0j, 0j, 0j, 0j, 0j, 0j, 0j, 0j, 0j, 0j, 0j, 0j, 0j, \r\n                0j, 0j, 0j, 0j, 0j, 0j, (-0.021650924801843517-0.3085455190622454j), 0j, 0j,\r\n                  0j, 0j, 0j, 0j, (0.20089824207135182-0.03722342551126882j), \r\n                  0j, 0j, 0j, 0j, 0j, 0j, 0j, 0j, 0j, 0j])\r\n    \r\n    print(target.conjugate().T@ target) # Unit vector\r\n\r\n    circuit = QuantumCircuit(7)\r\n    circuit.prepare_state(Statevector(target))\r\n\r\n    # 0 optimization level\r\n    state0 = execute(circuit, 0)\r\n    print(f\"optimization 0: {get_fidelity(state0, target)}\") #outputs 1\r\n\r\n    # 1 optimization level\r\n    state1 = execute(circuit, 1)\r\n    print(f\"optimization 1: {get_fidelity(state1, target)}\") #outputs 1\r\n\r\n    # 2 optimization level\r\n    state2 = execute(circuit, 2)\r\n    print(f\"optimization 2: {get_fidelity(state2, target)}\") #outputs 0.38665764499036803\r\n\r\n    # 3 optimization level\r\n    state3 = execute(circuit, 3)\r\n    print(f\"optimization 3: {get_fidelity(state3, target)}\") #outputs 0.38665764499036803\r\n```\r\n\r\n### What should happen?\r\n\r\nAll the fidelities should be 1.\r\n\r\n### Any suggestions?\r\n\r\n_No response_",
+    "state": "closed",
+    "state_reason": "completed",
+    "created_at": "2024-08-12T21:04:58Z",
+    "updated_at": "2025-07-18T12:24:17Z",
+    "closed_at": "2025-07-18T12:24:17Z",
+    "author": "alvinquantum"
+  },
+  "comments": [
+    {
+      "id": 2285006726,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/12948#issuecomment-2285006726",
+      "body": "I took a quick look at this and I think what is happening is at levels 2 and 3 we're running running the passes to unroll 3q or more gates in the lead up to doing logical optimizations. As part of this the `Isometry` object (which is used internally for `StatePreparation`) is decomposed by `HighLevelSynthesis` into several intermediate gate objects defined solely for the isometry module. I added the callback to each pass to print the number of ops after each pass runs. The state of the op count in the at this point is:\r\n\r\n`{'multiplex1_reverse_dg': 1, 'multiplex1_dg': 1, 'multiplex2_reverse_dg': 21, 'multiplex2_dg': 6, 'multiplex2_reverse_reverse_reverse_dg': 35, 'cx': 114, 'multiplex2_reverse_reverse_dg': 35, 'multiplex2_reverse_reverse_reverse_reverse_dg': 21, 'multiplex2_reverse_reverse_reverse_reverse_reverse_dg': 7, 'multiplex2_reverse_reverse_reverse_reverse_reverse_reverse_dg': 1}`\r\n\r\nas these are all 2q objects high level synthesis stops at this point so follow-on passes can potentially work with them. Although this is mostly for layout/routing which isn't run because you don't have a connectivity constraint set. Then a second decomposition is run on this during the translation stage to lower these to the target gates outlined in `basis_gates`. This decomposition ends up being different than what level 1 ends up with because the unroll 3q or more step is skipped and high level synthesis does the full decomposition in a single step. The gate counts end up being from the 2 different approaches:\r\n\r\nLevel 2: `{'cx': 212, 'ry': 127, 'rz': 127}`\r\nLevel 1: `{'rz': 127, 'ry': 127, 'cx': 240}`\r\n\r\nLooking closely at the output for level2 (and it'll be the same for 3 since the init stages are identical) we go from 114 cx gates after `HighLevelSynthesis` to 86 cx gates after `CommutativeCancellation` runs. I think this points to an issue in the `Isometry` class's partial decomposition output. Either those intermediate gate matrices are setup such that the commutation analysis thinks things commute erroneously or there is some other structural issue causing cnots to be cancelled when it's not otherwise valid. I didn't have a chance to dive into what commutation analysis and commutative cancellation think is going on though, so this is just a guess based on looking at the gate counts and the circuit visualization after `CommutativeCancellation` executes.\r\n\r\nThat being said I think the simplest fix though would be to update the isometry class to not have so many layers of nesting in it's definition. I expect if we fully decompose the isometry object to all standard gates `CommutativeCancellation` wouldn't incorrectly cancel gates as it's not dependent on these one off objects to be fully correct anymore and is running on a better tested code path. But this is still kind of a guess at this point.",
+      "created_at": "2024-08-12T22:27:05Z",
+      "updated_at": "2024-08-12T22:27:05Z",
+      "author": "mtreinish"
+    },
+    {
+      "id": 2286215359,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/12948#issuecomment-2286215359",
+      "body": "FWIW, the problem is not present in 1.2.0rc1, thanks to #12178, which changed the default synthesis function for `StatePreparation`. With this version the fidelity is `1` for all optimization levels. Furthermore, from what I can see, that PR completely remove the old (and as we now know buggy) code. So the simplest solution would be upgrading to the latest Qiskit version.  ",
+      "created_at": "2024-08-13T13:05:43Z",
+      "updated_at": "2024-08-13T13:05:43Z",
+      "author": "alexanderivrii"
+    },
+    {
+      "id": 2286806289,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/12948#issuecomment-2286806289",
+      "body": "Thanks @alexanderivrii. For my situation at least, it seems that 1.2.0rc1 resolves the transpile issues.",
+      "created_at": "2024-08-13T17:53:18Z",
+      "updated_at": "2024-08-13T17:53:53Z",
+      "author": "alvinquantum"
+    },
+    {
+      "id": 3089317035,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/12948#issuecomment-3089317035",
+      "body": "This appears to have been fixed in Qiskit 1.2 - I'll close this as \"complete\" for now.",
+      "created_at": "2025-07-18T12:24:17Z",
+      "updated_at": "2025-07-18T12:24:17Z",
+      "author": "jakelishman"
+    }
+  ],
+  "state_events": [
+    {
+      "event": "closed",
+      "created_at": "2025-07-18T12:24:17Z",
+      "commit_id": null,
+      "commit_url": null,
+      "actor": "jakelishman"
+    }
+  ],
+  "integrity": {
+    "body_sha256": "b74af60270d95b4f4ad611d094e81c7370d3aff52d1c15f7a011e6642ad8db2e",
+    "comment_body_sha256": {
+      "2285006726": "eb45ec62c29fa1d5f4fd4e0ba4a4900514581ed2d7069582576584bf3de64a99",
+      "2286215359": "ea36cd428ab543c5f980ad11b25d58a23f5b2290e5ab878a01455c30bfe86b5d",
+      "2286806289": "4f59bcf367c341cd56f52f249f73a6308f5a757ed3c92c85cefc2d50c85b5ca7",
+      "3089317035": "ed3dd85d155b21e67d7da3e3b76ba60ca3cb2fd2595eeaf8d049f6591ed6850b"
+    },
+    "expected_comment_count": 4
+  }
+}

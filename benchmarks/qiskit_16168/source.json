@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "repository": "Qiskit/qiskit",
+  "retrieved_at": "2026-10-30T17:28:03+00:00",
+  "issue": {
+    "number": 16168,
+    "title": "MultiplierGate(1, 1).decompose() fails because its definition has the wrong number of qubits",
+    "html_url": "https://github.com/Qiskit/qiskit/issues/16168",
+    "body": "### Environment\n\n- **Qiskit version**: 2.4.1\n- **Python version**: 3.13.13\n- **Operating system**: macOS\n\n\n### What is happening?\n\n`MultiplierGate` accepts `num_result_qubits` values in the documented range `[num_state_qubits, 2 * num_state_qubits]`, but decomposing a truncated-result multiplier fails.\n\nFor example, `MultiplierGate(1, 1)` reports that it is a 3-qubit gate, which is expected because it has two 1-qubit input registers and one 1-qubit result register. However, calling `QuantumCircuit.decompose()` raises:\n\n`DAGCircuitError: 'bit mapping invalid: expected 3, got 4'`\n\nThis suggests that the gate's generated definition has 4 qubits even though the gate itself has 3 qubits.\n\n\n### How can we reproduce the issue?\n\n```python\nfrom qiskit import QuantumCircuit\nfrom qiskit.circuit.library import MultiplierGate\n\n\nn, t = 1, 1\n\ngate = MultiplierGate(n, t)\nprint(\"gate.num_qubits:\", gate.num_qubits)\n\nqc = QuantumCircuit(gate.num_qubits)\nqc.append(gate, range(gate.num_qubits))\n\nprint(\"calling qc.decompose()...\")\nqc.decompose()\n```\nOutput:\n\n\ngate.num_qubits: 3\ncalling qc.decompose()...\nDAGCircuitError: 'bit mapping invalid: expected 3, got 4'\n\n\n\n### What should happen?\n\n\n\n\n`qc.decompose()` should succeed for `MultiplierGate(1, 1)`, since `num_result_qubits=1` is valid for `num_state_qubits=1`.\n\nThe decomposition should have the same number of qubits as the gate itself, i.e. 3 qubits in this example.\n\n\n\n\n### Any suggestions?\n\nThe issue appears to be in `MultiplierGate._define()`.\n\nCurrently it calls:\n\n```python\nself.definition = multiplier_qft_r17(self.num_state_qubits)\n\n```\nThis drops `self.num_result_qubits`, so `multiplier_qft_r17` uses its default result width of `2 * num_state_qubits`. For `MultiplierGate(1, 1)`, that creates a 4-qubit definition instead of the expected 3-qubit definition.\n\nThis can be observed with:\n``` python\nfrom qiskit.circuit.library import MultiplierGate\nfrom qiskit.synthesis.arithmetic import multiplier_qft_r17\n\nn, t = 1, 1\ngate = MultiplierGate(n, t)\n\ndefinition_width = gate.definition.num_qubits\ncorrect_width = multiplier_qft_r17(n, t).num_qubits\n\nprint(\"gate width:\", gate.num_qubits)\nprint(\"definition width:\", definition_width)\nprint(\"correct synthesis width:\", correct_width)\n```\nExpected fix may be to pass self.num_result_qubits through:\n``` python\nself.definition = multiplier_qft_r17(\n    self.num_state_qubits,\n    self.num_result_qubits,\n)\n```\n",
+    "state": "closed",
+    "state_reason": "completed",
+    "created_at": "2026-05-12T05:49:59Z",
+    "updated_at": "2026-06-09T09:21:23Z",
+    "closed_at": "2026-06-09T09:21:23Z",
+    "author": "Timeless-hep"
+  },
+  "comments": [
+    {
+      "id": 4428987086,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/16168#issuecomment-4428987086",
+      "body": "Thanks for the report! Your suggestion sounds like the correct fix, would you like to open a bugfix PR?",
+      "created_at": "2026-05-12T09:08:57Z",
+      "updated_at": "2026-05-12T09:08:57Z",
+      "author": "Cryoris"
+    },
+    {
+      "id": 4440104245,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/16168#issuecomment-4440104245",
+      "body": "It seems @cfcryptotrader-rgb has fixed it. Glad to see this getting fixed!",
+      "created_at": "2026-05-13T10:50:00Z",
+      "updated_at": "2026-05-13T10:50:00Z",
+      "author": "Timeless-hep"
+    },
+    {
+      "id": 4556620362,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/16168#issuecomment-4556620362",
+      "body": "Fixed in #16288. The issue was in `MultiplierGate._define()` — it wasn't passing `num_result_qubits` to `multiplier_qft_r17`. One line fix.\n",
+      "created_at": "2026-05-27T16:44:24Z",
+      "updated_at": "2026-05-27T16:44:24Z",
+      "author": "Jah-yee"
+    }
+  ],
+  "state_events": [
+    {
+      "event": "closed",
+      "created_at": "2026-06-09T09:21:23Z",
+      "commit_id": null,
+      "commit_url": null,
+      "actor": "ShellyGarion"
+    }
+  ],
+  "integrity": {
+    "body_sha256": "07c2c7547ee856428c71fb1f8a5d7ea804f8f2566e0552b43f94119aed4a2c2c",
+    "comment_body_sha256": {
+      "4428987086": "9f4aef110b241a01df2da9eac9f040106fced4acb33fcbe1c9ff3f880ff642c8",
+      "4440104245": "b74063b8693fb75157b8e801848c841c7414c081b80c4a0accc6ee98d71a9bdb",
+      "4556620362": "67a5a859189c0bf25c61f92c9ed729707b2edb9009388cb160ad6e47715cd4b0"
+    },
+    "expected_comment_count": 3
+  }
+}

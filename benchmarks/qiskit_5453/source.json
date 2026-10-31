@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "repository": "Qiskit/qiskit",
+  "retrieved_at": "2026-10-30T17:28:03+00:00",
+  "issue": {
+    "number": 5453,
+    "title": "Control of the diagonal gate not working properly",
+    "html_url": "https://github.com/Qiskit/qiskit/issues/5453",
+    "body": "<!-- ⚠️ If you do not respect this template, your issue will be closed -->\r\n<!-- ⚠️ Make sure to browse the opened and closed issues -->\r\n\r\n### Information\r\n\r\n- **Qiskit Terra 0.16.1**:\r\n- **Python version 3.7.3**:\r\n- **Win 10**:\r\n\r\n### What is the current behavior?\r\nConverting the attached diagonal gate to a circuit and then applying the control method does not produce expected result. \r\n\r\n\r\n### Steps to reproduce the problem\r\nThe code example is given in form of 3 separate version of the same problem. First two, i.e. VER-I ands VER-II, are giving the same correct results, while in case of VER-III, where controlled diagonal gate is used, output is incorrect.  \r\n\r\n```\r\nREG_I = QuantumRegister(2)\r\nREG_II = QuantumRegister(1)\r\nCIRC = QuantumCircuit(REG_I,REG_II)\r\nCIRC_1A=QuantumCircuit(REG_I)\r\nCIRC_1B=QuantumCircuit(REG_I)\r\nPARAM1A=[1,1,1,1]\r\nPARAM1B=[1,1,1,1]\r\nPARAM=[1,1,1,1,1,1,1,1]\r\n\r\n## VER - I ##\r\nCIRC.h([0,1,2])\r\nCIRC.u1(3.14/2,REG_I)\r\nCIRC.h(2)\r\n```\r\n```\r\n## VER - II ##\r\nCIRC.h([0,1,2])\r\n\r\nCIRC.u1(3.14/2,REG_I)\r\nCIRC.diagonal(PARAM,[0,1,2])\r\n\r\nCIRC.h(2)\r\n```\r\n```\r\n## VER - III ##\r\nCIRC.h([0,1,2])\r\nCIRC.u1(3.14/2,REG_I)\r\n\r\nCIRC_1A.diagonal(PARAM1A,[0,1])\r\nGATEC1A  =CIRC_1A.to_gate(label='A1')\r\nCGATEC1A=GATEC1A.control(1,ctrl_state='0') \r\nCIRC.append(CGATEC1A,[2,0,1])\r\nCIRC_1B.diagonal(PARAM1B,[0,1])\r\nGATEC1B  =CIRC_1B.to_gate(label='B1')\r\nCGATEC1B=GATEC1B.control(1,ctrl_state='1') \r\nCIRC.append(CGATEC1B,[2,0,1])\r\n\r\nCIRC.h(2)\r\n```\r\n\r\n### What is the expected behavior?\r\n\r\nFor the VER-I and VER-II correct statevector is obtained,\r\n\r\n```\r\n[ 5.00000000e-01-3.06161700e-17j  3.98163355e-04+4.99999841e-01j\r\n  3.98163355e-04+4.99999841e-01j -4.99999366e-01+7.96326458e-04j\r\n  0.00000000e+00+0.00000000e+00j  0.00000000e+00+0.00000000e+00j\r\n  0.00000000e+00+0.00000000e+00j  0.00000000e+00+0.00000000e+00j]\r\n```\r\nwhile in case of the VER-III wrong results are being produced, i.e.\r\n\r\n```\r\n[ 0.35369413-0.35341259j  0.35369413+0.35341259j  0.35369413+0.35341259j\r\n -0.35313082+0.35397545j  0.        +0.j          0.        +0.j\r\n  0.        +0.j          0.        +0.j        ]\r\n```\r\n\r\n### Suggested solutions\r\n\r\n\r\n",
+    "state": "closed",
+    "state_reason": "completed",
+    "created_at": "2020-12-01T12:11:04Z",
+    "updated_at": "2021-01-19T17:10:31Z",
+    "closed_at": "2021-01-19T17:10:31Z",
+    "author": "ljubabu"
+  },
+  "comments": [
+    {
+      "id": 737163877,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/5453#issuecomment-737163877",
+      "body": "How are `CIRC_1A` and `CIRC_1B` initialized? Are they empty circuits? Could you maybe post a smaller minimal-working example, then it would be a little easier to understand where exactly things are going wrong 🙂 ",
+      "created_at": "2020-12-02T11:13:21Z",
+      "updated_at": "2020-12-02T11:13:21Z",
+      "author": "Cryoris"
+    },
+    {
+      "id": 737862887,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/5453#issuecomment-737862887",
+      "body": "@Cryoris  Thanks for the help. I simplified the test code in which only identity as diagonal gate is applied. Even for this simple case controlled method of the diagonal gate produces wrong results. ",
+      "created_at": "2020-12-03T10:48:44Z",
+      "updated_at": "2020-12-03T10:51:11Z",
+      "author": "ljubabu"
+    },
+    {
+      "id": 739599584,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/5453#issuecomment-739599584",
+      "body": "@ljubabu If you look carefully, the two statevectors are equivalent up to a global phase `pi / 4`.  So there must be a global phase that is not tracked somewhere in the transpilation process. My guess is that if you execute your circuit with `optimization_level=0` or `basis_gates=['u', 'cx']` the vectors will be the same.",
+      "created_at": "2020-12-07T00:42:59Z",
+      "updated_at": "2020-12-07T00:42:59Z",
+      "author": "georgios-ts"
+    },
+    {
+      "id": 744554698,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/5453#issuecomment-744554698",
+      "body": "@Cryoris Sorry for late response. Thanks for the help. You are right regarding the global phase and for the introducing the optimization level in execution method remark. However, when I change the diagonal parameters to slightly complicated form\r\n ```\r\nPARAM1A=[1,1,1j,1j]\r\nPARAM1B=[1,1,-1j,-1j]\r\nPARAM=[1,1,1j,1j,1,1,-1j,-1j]\r\n ```\r\nin order to check whether proposed method is working, again wrong results are obtained. For the VER I and II correct statevector is obtained,\r\n ```\r\n[ 5.00000000e-01-3.06161700e-17j  3.98163355e-04+4.99999841e-01j\r\n -6.72718651e-18-3.06260542e-17j  3.05934778e-17-8.19713403e-18j\r\n -1.79202035e-17+3.06161700e-17j -3.06293809e-17+6.70280603e-18j\r\n -4.99999841e-01+3.98163355e-04j -7.96326458e-04-4.99999366e-01j]\r\n```\r\n\r\nwhile in case of the VER-III wrong results are being produced, i.e.\r\n\r\n ```\r\n[ 3.53553391e-01-1.62588398e-17j  2.81544009e-04+3.53553278e-01j\r\n  2.81544009e-04+3.53553278e-01j -3.53552942e-01+5.63087839e-04j\r\n -3.31456373e-17-3.53553391e-01j  3.53553278e-01-2.81544009e-04j\r\n -3.53553278e-01+2.81544009e-04j -5.63087839e-04-3.53552942e-01j]\r\n ```\r\nIn both cases following statement for the execute is used:\r\n `\r\nCIRC_job1 = execute(CIRC, backend1,optimization_level=0).result().get_statevector(CIRC)\r\n`\r\nThank you.\r\n",
+      "created_at": "2020-12-14T16:27:43Z",
+      "updated_at": "2020-12-14T16:27:43Z",
+      "author": "ljubabu"
+    },
+    {
+      "id": 744594511,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/5453#issuecomment-744594511",
+      "body": "@ljubabu You are right. `Diagonal` gate constructs a circuit that is equivalent up to a global phase (and does not track it) but this becomes a relative phase when you add control.",
+      "created_at": "2020-12-14T17:32:49Z",
+      "updated_at": "2020-12-14T17:32:49Z",
+      "author": "georgios-ts"
+    }
+  ],
+  "state_events": [
+    {
+      "event": "closed",
+      "created_at": "2021-01-19T17:10:31Z",
+      "commit_id": null,
+      "commit_url": null,
+      "actor": "mergify[bot]"
+    }
+  ],
+  "integrity": {
+    "body_sha256": "661bb634244fe891ff15f576c5321c9608b92f73be7d72365df57b18e6ac27ec",
+    "comment_body_sha256": {
+      "737163877": "40bc3fcc65d0c474947f1a661b0c4dc25c128227d7f6ad67061d8efbec8b514d",
+      "737862887": "94eacbd5138b0dc6b6fa695d15dcfb6061a43d9ad52728c7b18bbb53c82148bd",
+      "739599584": "d1f8ee16bb898cbccac76ddde8ed70db2d7274c5170e608e724ee1e67d5b9962",
+      "744554698": "8c2a88b6abe3f6f45677e58182a003553e75042a0ad17592802b2ecb04474574",
+      "744594511": "5a3e2bdafa84676340a1195cd9899ffc3a3f2695222f92013648ab98063b347d"
+    },
+    "expected_comment_count": 5
+  }
+}

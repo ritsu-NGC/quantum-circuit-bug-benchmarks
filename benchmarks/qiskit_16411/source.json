@@ -1,0 +1,116 @@
+{
+  "schema_version": 1,
+  "repository": "Qiskit/qiskit",
+  "retrieved_at": "2026-10-30T17:28:03+00:00",
+  "issue": {
+    "number": 16411,
+    "title": "OptimizeAnnotated (_canonicalize_modifiers) changes the unitary for a negative fractional PowerModifier",
+    "html_url": "https://github.com/Qiskit/qiskit/issues/16411",
+    "body": "### Environment\n\n- **Qiskit version**: 2.4.1\n- **Python version**: 3.13.13\n- **Operating system**: macOS\n\n\n### What is happening?\n\n`_canonicalize_modifiers` rewrites a single `PowerModifier(-0.5)` into `[InverseModifier(), PowerModifier(0.5)]`, i.e. it computes `(A^-1)^0.5` instead of the requested `A^(-0.5)`. For an operator with an eigenvalue on the negative real axis (e.g. `HGate`, eigenvalue `-1`), the principal matrix-power branch makes these two **unequal**, so `OptimizeAnnotated` silently changes the circuit unitary. The two results are exact complex conjugates of each other.\n\n### How can we reproduce the issue?\n\n```python\nimport numpy as np\nfrom qiskit import QuantumCircuit\nfrom qiskit.circuit.annotated_operation import AnnotatedOperation, PowerModifier\nfrom qiskit.circuit.library import HGate\nfrom qiskit.quantum_info import Operator\nfrom qiskit.transpiler import PassManager\nfrom qiskit.transpiler.passes import OptimizeAnnotated\n\nqc = QuantumCircuit(1)\nqc.append(AnnotatedOperation(HGate(), [PowerModifier(-0.5)]), [0])\nout = PassManager([OptimizeAnnotated()]).run(qc)\n\nprint(\"input  Operator (H^-0.5):\")\nprint(Operator(qc).data)\nprint(\"output Operator ((H^-1)^0.5):\")\nprint(Operator(out).data)\nprint(\"equiv:\", Operator(qc).equiv(Operator(out)))\n```\nOutput：\n\n```\ninput  Operator (H^-0.5):\n[[0.85355339-0.14644661j 0.35355339+0.35355339j]\n [0.35355339+0.35355339j 0.14644661-0.85355339j]]\noutput Operator ((H^-1)^0.5):\n[[0.85355339+0.14644661j 0.35355339-0.35355339j]\n [0.35355339-0.35355339j 0.14644661+0.85355339j]]\nequiv: False\n```\n\n### What should happen?\n\nThe optimized circuit must be `Operator`-equivalent to the input; `equiv` should be `True`.\n\n### Any suggestions?\n\nThe factorization pushes the inverse into the **base** (`A -> A^-1`, then raise to `+0.5`). Under the principal branch, `A^(-p) == (A^p)^(-1)` always holds, but `A^(-p) == (A^-1)^p` does **not** (it fails wherever an eigenvalue sits on the branch cut). Verifiable:\n\n```python\nfrom qiskit.quantum_info import Operator\nfrom qiskit.circuit.library import HGate\nH = Operator(HGate())\nprint(\"A^(-0.5) == (A^0.5)^(-1) :\", H.power(-0.5).equiv(H.power(0.5).power(-1)))  # True\nprint(\"A^(-0.5) == (A^-1)^0.5   :\", H.power(-0.5).equiv(H.power(-1).power(0.5)))  # False\n```\n\nSo a fix is to emit the **positive power first, then the inverse** (modifier order `[PowerModifier(p), InverseModifier()]`), or to not split negative fractional powers at all.",
+    "state": "open",
+    "state_reason": null,
+    "created_at": "2026-06-11T08:25:40Z",
+    "updated_at": "2026-06-16T12:08:34Z",
+    "closed_at": null,
+    "author": "Timeless-hep"
+  },
+  "comments": [
+    {
+      "id": 4678830609,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/16411#issuecomment-4678830609",
+      "body": "This arguably isn't a bug. The matrix form has degenerate solutions: both _are_ solutions and the problem is assuming that the numerics will reliable fall on any given side of the branch cut.\n\nThe problem isn't the inverse, it's the fractional power - whenever those are involved, there's a whole bunch of questions. With those logic we could also argue that we shouldn't be able to simplify $(A^2)^{0\n.5} = A$, because for things like rotation gates the square can cause an overturn and the subsequent division might fall on another side of the branch cut.",
+      "created_at": "2026-06-11T08:51:27Z",
+      "updated_at": "2026-06-11T08:51:51Z",
+      "author": "jakelishman"
+    },
+    {
+      "id": 4678896316,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/16411#issuecomment-4678896316",
+      "body": "Thanks for your reply. I agree that fractional matrix powers require a branch choice. My concern is that Qiskit already makes that choice observable through AnnotatedOperation.to_matrix() and Operator.power(). But the problem comes from the following optimization. Before the pass, PowerModifier(-0.5) evaluates as A.power(-0.5); after the pass it evaluates as A.power(-1).power(0.5), and these are not equivalent. The discrepancy is caused by the canonicalization rewrite, not merely by comparing two independent numerical evaluations of the same expression. If PowerModifier is intentionally multivalued and optimization may select another root, that semantic relaxation should arguably be documented; otherwise OptimizeAnnotated is not preserving the operation represented by its input.",
+      "created_at": "2026-06-11T08:59:59Z",
+      "updated_at": "2026-06-11T12:20:40Z",
+      "author": "Timeless-hep"
+    },
+    {
+      "id": 4710577526,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/16411#issuecomment-4710577526",
+      "body": "I'm working on a fix for this. The root cause is in `_canonicalize_modifiers` in `qiskit/circuit/annotated_operation.py` — the canonical order should be `[PowerModifier(p), InverseModifier()]` (realizing `(A^p)^{-1}`) rather than `[InverseModifier(), PowerModifier(p)]` (realizing `(A^{-1})^p`). Will open a PR shortly.",
+      "created_at": "2026-06-15T17:33:37Z",
+      "updated_at": "2026-06-15T17:33:37Z",
+      "author": "dmeliksetian"
+    },
+    {
+      "id": 4710580868,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/16411#issuecomment-4710580868",
+      "body": "I'm working on a fix for this. The root cause is in \\`_canonicalize_modifiers\\` in \\`qiskit/circuit/annotated_operation.py\\` — the canonical order should be \\`[PowerModifier(p), InverseModifier()]\\` (realizing \\`(A^p)^{-1}\\`) rather than \\`[InverseModifier(), PowerModifier(p)]\\` (realizing \\`(A^{-1})^p\\`). Will open a PR shortly.\"",
+      "created_at": "2026-06-15T17:34:03Z",
+      "updated_at": "2026-06-15T17:34:03Z",
+      "author": "dmeliksetian"
+    },
+    {
+      "id": 4710886184,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/16411#issuecomment-4710886184",
+      "body": "YujinSong-hep: yeah, I get where you're coming from.  I'm mostly finding it very unpleasant to accept the follow-on conclusion that `X.power(2).power(0.5)` can't be \"optimised\" to `X`, but I'm tending more and more to agree that that's _not_ a valid optimisation without knowing specific details of `X`, because of the branch-cut discontinuity.\n\ndmeliksetian: There was clearly on-going discussion here about whether the semantics of the issue _should_ be \"fixed\" or not.  Please don't just set LLMs on \"auto respond\" to Qiskit issues; it's not helpful and your LLM is clearly just repeating points from the top comment without having read any of the discussion.  (Having LLMs open PRs without human oversight is also a violation of the contributing policy, should that occur.)",
+      "created_at": "2026-06-15T18:05:55Z",
+      "updated_at": "2026-06-15T18:05:55Z",
+      "author": "jakelishman"
+    },
+    {
+      "id": 4711102328,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/16411#issuecomment-4711102328",
+      "body": "@jakelishman To clarify on the PR: it changes the canonical ordering in _canonicalize_modifiers for any modifier sequence whose total power is negative with magnitude other than 1 — emitting [PowerModifier(|p|), InverseModifier()] (realizing (A^{|p|})^{-1}) instead of the previous [InverseModifier(), PowerModifier(|p|)] (realizing (A^{-1})^{|p|}). The power-multiplication behavior (e.g. PowerModifier(2) + PowerModifier(0.5) collapsing to the identity) is untouched, so the X.power(2).power(0.5) → X question is orthogonal to this PR.\n\nAlso, to address the concern directly: this was not an automated LLM response. I used Claude Code as a development tool with active oversight throughout — the fix, the tests, and the PR were all reviewed and understood by me before being posted. The AI disclosure in the PR body is there precisely because the contributing policy asks for it, not because the process was unsupervised.\n\nIf you think the whole PowerModifier splitting behavior should be reconsidered now, I can close the PR.",
+      "created_at": "2026-06-15T18:29:54Z",
+      "updated_at": "2026-06-15T18:37:23Z",
+      "author": "dmeliksetian"
+    },
+    {
+      "id": 4715657275,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/16411#issuecomment-4715657275",
+      "body": "I now also believe that `_canonicalize_modifiers` is not fully correct in the presence of fractional powers. At the time I wrote the code, I was under the impression that fractional powers are inherently multi-valued, so a user who writes $A^{1/2}$ is willing to accept either of the two roots as the output. \n\n@dmeliksetian, I don't understand your fix: we would now rewrite both $(A^2)^{-1}$ and $(A^{-1})^2$ as the former rather than the latter (instead of the other way around), but in either case one of the simplifications would be incorrect.\n\nAn alternative approach would be not to simplify certain expressions, which means that `_canonicalize_modifiers` might end up with something like ``A.power(0.5).inverse().power(0.3).inverse().power(0.1)``, without being able to combine the powers or the inverses. Though It would be nice to clearly understand and document which reductions are correct, and to apply this reductions (such as replacing ``X.power(2).power(0.5)`` by ``X`` if we agree that this is fully correct, taking principal roots into account). I do hope that for the case where we have inverses, controls, and only *integer* powers, the reduction in `_canonicalize_modifiers` is valid.\n\nNote that there could be other places in code might make assumptions either that we can have at most one type of each modifier after canonicalization or that the order of modifiers does not matter, in particular two places where we should look are ``AnnotatedSynthesisDefault`` and ``OptimizeAnnotated``.\n\nI am now curious how other computer algebra systems handle this sort of issues; looking at the documentation for Mathematica's [PowerExpand](https://reference.wolfram.com/language/ref/PowerExpand.html), they explicitly state that \"it in general disregards all issues of branches of multivalued functions, so may not preserve the numerical values of expressions\".",
+      "created_at": "2026-06-16T06:33:13Z",
+      "updated_at": "2026-06-16T06:33:13Z",
+      "author": "alexanderivrii"
+    },
+    {
+      "id": 4718101734,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/16411#issuecomment-4718101734",
+      "body": "@alexanderivrii Our fix specifically addresses the ordering of InverseModifier and PowerModifier in the output of _canonicalize_modifiers. The current code emits [InverseModifier(), PowerModifier(|p|)], which computes (A⁻¹)^p. We change it to emit [PowerModifier(|p|), InverseModifier()], which computes (A^p)⁻¹. These are not always equal — they differ when eigenvalues of A lie on the branch cut of the principal matrix logarithm (the negative real axis), as demonstrated by HGate with eigenvalue -1.\nThe identity (A^p)⁻¹ = A^{-p} holds unconditionally. The proof is straightforward: writing A = V D V⁻¹, the matrix power is A^p = V · diag(λᵢ^p) · V⁻¹, and inverting gives V · diag((λᵢ^p)⁻¹) · V⁻¹ = V · diag(λᵢ^{-p}) · V⁻¹, which is exactly A^{-p} by definition. The critical point is that this step never calls log again — it only takes the scalar reciprocal of the already-computed value λᵢ^p, which is ordinary division with no branch cut involved. By contrast, (A⁻¹)^p requires evaluating exp(p · log(λᵢ⁻¹)), and when λᵢ is real and negative the principal branch assigns the same argument iπ to both λᵢ and λᵢ⁻¹, so negating the exponent and negating the input produce exp(-p·iπ) and exp(p·iπ) respectively — complex conjugates for non-integer p, not equal.\nWe agree with the broader observation that _canonicalize_modifiers has additional correctness issues beyond what our PR touches — in particular the composition of fractional powers (A^a)^b = A^{ab} does not hold in general under the principal branch, and the comment claiming \"all modifiers commute\" is incorrect for fractional powers. Those are separate problems that deserve their own discussion and fix.\nOne approach that would make the semantics unambiguous is to enforce at the API level that each modifier type appears at most once, and in a fixed canonical order: at most one PowerModifier, at most one InverseModifier, at most one ControlModifier, always in the order [PowerModifier, InverseModifier, ControlModifier]. Under this constraint the meaning of a modifier list is always C(( A^|p| )^{-1}) — raise to a positive power, then invert, then control — which is branch-cut safe by the identity above. Any attempt to construct a modifier list that would require composing two fractional powers, or interleaving inverses and fractional powers, would be rejected or left unsimplified rather than silently producing a wrong result. This would also simplify downstream code in AnnotatedSynthesisDefault and OptimizeAnnotated that currently has to handle arbitrary modifier sequences.",
+      "created_at": "2026-06-16T11:10:51Z",
+      "updated_at": "2026-06-16T11:10:51Z",
+      "author": "dmeliksetian"
+    },
+    {
+      "id": 4718368662,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/16411#issuecomment-4718368662",
+      "body": "Thanks for the detailed reply. My point is that since we have identified a problem with canonicalizing modifiers in the presence of fractional powers, we should think of a full solution that handles all cases, rather than half-solutions that do not.\n\nExperimenting with the original issue and your PR #16438, consider the following circuits:\n```python\n\nqc = QuantumCircuit(1)\nqc.append(AnnotatedOperation(HGate(), [PowerModifier(-0.5)]), [0])\nout = PassManager([OptimizeAnnotated()]).run(qc)\nprint(\"circuit1: equiv:\", Operator(qc).equiv(Operator(out)))\n\n\nqc = QuantumCircuit(1)\nqc.append(AnnotatedOperation(HGate(), [PowerModifier(0.5), InverseModifier()]), [0])\nout = PassManager([OptimizeAnnotated()]).run(qc)\nprint(\"circui2: equiv:\", Operator(qc).equiv(Operator(out)))\n\n\nqc = QuantumCircuit(1)\nqc.append(AnnotatedOperation(HGate(), [InverseModifier(), PowerModifier(0.5)]), [0])\nout = PassManager([OptimizeAnnotated()]).run(qc)\nprint(\"circuit3: equiv:\", Operator(qc).equiv(Operator(out)))\n```\n\nThe main branch outputs:\n```\ncircuit1: equiv: False\ncircui2: equiv: False\ncircuit3: equiv: True\n```\nand your PR outputs:\n```\ncircuit1: equiv: True\ncircui2: equiv: True\ncircuit3: equiv: False\n```\nso neither are fully correct. At the moment, I do not see an approach that correctly combines all powers and all inverses in all cases, but I would be happy to be proven wrong.\n\nI also don't understand the following comment from your PR summary:\n```\nAdditionally, the guard power != 1 incorrectly fired for power == -1 (pure inverse), which would have appended a spurious PowerModifier(1).\n```\nCan you give me an example where the current behavior is wrong or produces `PowerModifier(1)`?",
+      "created_at": "2026-06-16T11:45:24Z",
+      "updated_at": "2026-06-16T11:45:24Z",
+      "author": "alexanderivrii"
+    },
+    {
+      "id": 4718559567,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/16411#issuecomment-4718559567",
+      "body": "Thanks for testing all three circuits — that's the right way to evaluate this. You're correct that our PR trades one broken case for another: we fix circuit1 and circuit2 but break circuit3. Closing the PR.\n\nAlso correcting a mistake in the PR description: the claim that the original power != 1 guard would produce a spurious PowerModifier(1) for power == -1 is wrong. In the original code, power is already negated before that check, so power == 1 at that point and the guard correctly fires. That was an error in the PR summary, not a real bug in the original code.\n\nThe broader point stands: there's no simple reordering fix that handles all three circuits correctly, because _canonicalize_modifiers collapses modifier sequences by multiplying powers together, losing information about the intended evaluation order. A complete solution would need to either preserve that ordering or restrict which sequences are valid to construct — roughly along the lines of your suggestion about leaving certain expressions unsimplified.\n",
+      "created_at": "2026-06-16T12:08:34Z",
+      "updated_at": "2026-06-16T12:08:34Z",
+      "author": "dmeliksetian"
+    }
+  ],
+  "state_events": [],
+  "integrity": {
+    "body_sha256": "b9f3a69d6191dc4eaaef337f85cdc385b288b2916a0d2f7fdf8831f86675e3ed",
+    "comment_body_sha256": {
+      "4678830609": "70fc4d25d9a83a2da869aa133be0126b806db55fc50b95867c1b43effd9e70ce",
+      "4678896316": "aaee3b142f2c251a7d8ea0f98caa51fac65cdd9c19634b2eb1c9090f51b1ab1d",
+      "4710577526": "763188686a307faa73f6030b186b8744afdd38e3d28c5cdce8e1bd3888908bdf",
+      "4710580868": "11898e27f21fbb51673b54e6ad8cdf009bbe9bebfeba7b0b36175f53f36aa08e",
+      "4710886184": "7663efb904015d71fc51220b0e317d6b08b70c91e5530728a6b5c39bb321b953",
+      "4711102328": "7dc6841271714ee2db5e3dc03e33f6fc8b9a1f1774bedf0878f0259d0f0c61da",
+      "4715657275": "3031175a8d3da95963c0cd597b3367bf6d6df4d63882b39fa710b68177b33bc2",
+      "4718101734": "b316ac2c8357922e5c1fd0bd436bbaedc0ffdfa11a745fe718b47c91290eb7a5",
+      "4718368662": "60e63886a482197a8d9d61c01de4534af5ac7be5d91b0c1236cc71e5ca379de5",
+      "4718559567": "7f7f29129c7ee1bd3e823c13623669eeb9580dbf7d047ec85a5a2446b6180e30"
+    },
+    "expected_comment_count": 10
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "repository": "Qiskit/qiskit",
+  "retrieved_at": "2026-10-30T17:28:03+00:00",
+  "issue": {
+    "number": 16524,
+    "title": "PhaseOracleGate (All 1s)",
+    "html_url": "https://github.com/Qiskit/qiskit/issues/16524",
+    "body": "### Environment\n\n- **Qiskit version**: \n- **Python version**: \n- **Operating system**: \n\n\n### What is happening?\n\nI wanted to create a 3-qubit phase-oracle gate with f(x) = 1 for all x. This adds a negative sign to all qubits, which is a global phase. But even so, it should have produced some output. Instead, it throws the following error.\n\nTranspilerError: 'HighLevelSynthesis is unable to synthesize \"Phase Oracle\"'\n\n### How can we reproduce the issue?\n\nfrom qiskit import QuantumCircuit, transpile\nfrom qiskit_aer import AerSimulator\nfrom qiskit.circuit.library import PhaseOracleGate\n\noracle_gate = PhaseOracleGate(\"(x1 | ~x1) & (x2 | ~x2) & x3\", label=\" Oracle \")       # Creates oracle from a function where f(x) is always 1\n\nqc = QuantumCircuit(oracle_gate.num_qubits)\n\nfor i in range(3):\n    qc.h(i)\nqc.append(oracle_gate, range(oracle_gate.num_qubits))    \nfor i in range(3):\n    qc.h(i)\n\nqc.measure_all()\n\nsimulator = AerSimulator()\ncompiled = transpile(qc, simulator)\n\nnum_shots = 1000\nresults = simulator.run(compiled, shots=num_shots).result()\ncount = results.get_counts()\n\ncount = percentage(dict(sorted(count.items())))\nprint(count)        \n\nqc.draw(output=\"mpl\")\n\n### What should happen?\n\nI think it should have been able to process this function. It does perfectly fine with the function f(x) = 0 for all x implemented using \"(x1 & ~x1) | (x2 & ~x2) | (x3 & ~x3)\"\n\n### Any suggestions?\n\n_No response_",
+    "state": "closed",
+    "state_reason": "completed",
+    "created_at": "2026-07-02T13:53:56Z",
+    "updated_at": "2026-07-07T10:29:59Z",
+    "closed_at": "2026-07-07T10:09:04Z",
+    "author": "as21507-art"
+  },
+  "comments": [
+    {
+      "id": 4866519479,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/16524#issuecomment-4866519479",
+      "body": "Typo in the 5th line where he Oracle gate should have been the following:\n\noracle_gate = PhaseOracleGate(\"(x1 | ~x1) & (x2 | ~x2) & (x3 | ~x3)\", label=\" Oracle \")  ",
+      "created_at": "2026-07-02T13:55:49Z",
+      "updated_at": "2026-07-02T13:55:49Z",
+      "author": "as21507-art"
+    }
+  ],
+  "state_events": [
+    {
+      "event": "closed",
+      "created_at": "2026-07-07T10:09:04Z",
+      "commit_id": null,
+      "commit_url": null,
+      "actor": "Cryoris"
+    }
+  ],
+  "integrity": {
+    "body_sha256": "bfe218c373e1cb90e7c89566c2bb2013fb210094f1d7d799323042e7cb4e87fb",
+    "comment_body_sha256": {
+      "4866519479": "9d11cf44c622f2c86e0fe2c7f05f003a44796db0b08082ae07191e22b4575fbf"
+    },
+    "expected_comment_count": 1
+  }
+}

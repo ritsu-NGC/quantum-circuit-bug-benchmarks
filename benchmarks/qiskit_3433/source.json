@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "repository": "Qiskit/qiskit",
+  "retrieved_at": "2026-10-30T17:28:03+00:00",
+  "issue": {
+    "number": 3433,
+    "title": "Incorrect transpilation of phase-gadgets with small angles on optimisation level 2 and 3",
+    "html_url": "https://github.com/Qiskit/qiskit/issues/3433",
+    "body": "### Information\r\n\r\n- **Qiskit Terra version**: 0.10.0\r\n- **Python version**: 3.6.9\r\n- **Operating system**: MacOS Mojave\r\n\r\n### What is the current behavior?\r\n\r\nIf there is a ZZ pauli exponential with a small angle, Qiskit will remove the CXs and leave the small angle. (It will also do this if the Xs are not controlled)\r\n\r\n### Steps to reproduce the problem\r\n\r\nCreate a `QuantumCircuit` with an Rz nested between the targets of two CX gates. See this qasm:\r\n\r\n```\r\nOPENQASM 2.0;\r\ninclude \"qelib1.inc\";\r\n\r\nqreg q[2];\r\ncx q[1],q[0];\r\nrz(3.978863630138309e-07*pi) q[0];\r\ncx q[1],q[0];\r\n```\r\n\r\nThen load the qasm into qiskit and run an optimisation pass:\r\n```\r\nfrom qiskit import QuantumCircuit\r\nfrom qiskit.compiler import transpile\r\nfrom qiskit.transpiler import CouplingMap\r\n\r\nqsc = QuantumCircuit.from_qasm_file(\"test_qiskit.qasm\")\r\nbasis_gates = ['u1','u2','u3','cx']\r\ncm = None\r\n\r\nqsc2 = transpile(qsc,basis_gates=basis_gates,coupling_map=cm,optimization_level=2)\r\nprint(qsc2)\r\n```\r\n\r\n### What is the expected behavior?\r\n\r\nEither the circuit should be left unchanged or, if the angle is considered to be too small to be worth leaving in and it should be approximated away, then remove the entire phase-gadget. I'm not sure whether this was a design choice or a bug, as I don't really understand how it is possible to write this behaviour by accident.\r\n\r\n### Suggested solutions\r\n\r\nSee above.",
+    "state": "open",
+    "state_reason": null,
+    "created_at": "2019-11-07T21:35:42Z",
+    "updated_at": "2024-11-21T16:42:13Z",
+    "closed_at": null,
+    "author": "alexcowtan"
+  },
+  "comments": [
+    {
+      "id": 552926988,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/3433#issuecomment-552926988",
+      "body": "Good catch, this looks like an issue in the `CommutationAnalysis` pass ( https://github.com/Qiskit/qiskit-terra/blob/0e332a9/qiskit/transpiler/passes/commutation_analysis.py#L121 ).\r\n\r\n(In #2442 , the `CommutationAnalysis` pass was refactored to use `qiskit.quantum_info.Operator` to determine if two instructions commuted, which in turn reduced its `atol` from `1e-10` to `1e-8`. The check for this circuit still would've failed though, due to the default `rtol=1e-5`.)\r\n\r\nReducing the `rtol` on the operator comparison would be one way to fix this (the current comparison passes because of the `rtol` on `np.isclose(1, 1+1.25e-6j)`) but maybe there's a more numerically robust way to determine commutativity than `np.allclose`. @DanPuzzuoli @chriseclectic ?",
+      "created_at": "2019-11-12T14:52:40Z",
+      "updated_at": "2019-11-12T14:52:40Z",
+      "author": "kdk"
+    },
+    {
+      "id": 552938915,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/3433#issuecomment-552938915",
+      "body": "I think just lowering the tolerance makes sense... it seems efficient, and entry-wise comparison is the most stringent distance measure I think you can get for distances between matrices.\r\n\r\nOnly other consideration is if you want to allow for unitaries that are the same up to global phase to pass the test.",
+      "created_at": "2019-11-12T15:19:21Z",
+      "updated_at": "2019-11-12T15:19:21Z",
+      "author": "DanPuzzuoli"
+    },
+    {
+      "id": 569762715,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/3433#issuecomment-569762715",
+      "body": "I think the desired behavior is to have the CXs cancelled *and* the Rz removed. \r\n`CX.RZ(theta).CX` is equal to `RZZ(theta)` which for tiny angles should just be identity.\r\nSo I would say the commutation detection is correct, we just do not have a mechanism to remove tiny rotations from the circuit yet. I can work on this as part of #3658 ",
+      "created_at": "2019-12-30T18:51:54Z",
+      "updated_at": "2019-12-30T18:51:54Z",
+      "author": "ajavadia"
+    },
+    {
+      "id": 994597213,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/3433#issuecomment-994597213",
+      "body": "# Update for Santa:elf:- QGoGP\r\n\r\n✅ Issue reproducible! Removes CX's and keeps the small angle when optimized with level 2 or 3 as mentioned by OP. Optimization level 1 has expected behavior and does not change the circuit significantly. PR #3658 has a few checks to be passed which proposes a fix for this.\r\n#### OP's Code -\r\n\r\n```\r\nqasm = \"\"\"\r\nOPENQASM 2.0;\r\ninclude \"qelib1.inc\";\r\n\r\nqreg q[2];\r\ncx q[1],q[0];\r\nrz(3.978863630138309e-07*pi) q[0];\r\ncx q[1],q[0];\r\n\"\"\"\r\nfrom qiskit import QuantumCircuit\r\nfrom qiskit.compiler import transpile\r\nfrom qiskit.transpiler import CouplingMap\r\n\r\nqsc = QuantumCircuit.from_qasm_str(qasm)\r\nbasis_gates = ['u1','u2','u3','cx']\r\ncm = None\r\nprint(qsc)\r\n\r\nqsc2 = transpile(qsc,basis_gates=basis_gates,coupling_map=cm,optimization_level=2)\r\nprint(qsc2)\r\n```\r\n#### Original Circuit\r\n```\r\n     ┌───┐┌──────────────┐┌───┐\r\nq_0: ┤ X ├┤ Rz(1.25e-06) ├┤ X ├\r\n     └─┬─┘└──────────────┘└─┬─┘\r\nq_1: ──■────────────────────■──\r\n\r\n\r\n```\r\n#### Transpiled circuit (Level 2 and 3)\r\n```\r\nglobal phase: 2π\r\n     ┌─────────────────────────┐\r\nq_0: ┤ U1(1.24999687500781e-6) ├\r\n     └─────────────────────────┘\r\nq_1: ───────────────────────────\r\n              \r\n```\r\nWill update comment/add more comments if cause is found/fixed!\r\n\r\n> Python version 3.9.7\r\n> qiskit-terra version: 0.19.1\r\n\r\n\r\n\r\n",
+      "created_at": "2021-12-15T09:55:12Z",
+      "updated_at": "2021-12-15T09:55:12Z",
+      "author": "mrvee-qC"
+    },
+    {
+      "id": 2491742368,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/3433#issuecomment-2491742368",
+      "body": "We're currently using 2 different standards when it comes to checking if something behaves as identity:\n1. `RemoveIdentityEquivalent` (and others) remove a gate, if the gate fidelity is 1 up to floating point precision\n2. the commutation checker assumes a rotation gate commutes with anything, if the rotation angle is 0 (mod 2pi) up to a tolerance of 1e-5\n\nWe should be using 1. consistently, as it has a well-defined effect on the outcome that generalizes beyond rotations as well.",
+      "created_at": "2024-11-21T16:42:12Z",
+      "updated_at": "2024-11-21T16:42:12Z",
+      "author": "Cryoris"
+    }
+  ],
+  "state_events": [],
+  "integrity": {
+    "body_sha256": "a5904f45e6d0f592b796a0981761d35d197cc1250868e628e69d0c0536809bf3",
+    "comment_body_sha256": {
+      "552926988": "b1cfaf3407079a2f4679f3fda39771317bff7e8af3bea9d20fbb16cd799a2ba3",
+      "552938915": "bd2818b87c30cb8676847e0356e654991d7bbff537f765a6e8a5891ca7aaae0a",
+      "569762715": "f562c40947d5d2f20270253e797a8ac70eaaf14ebd362d9f102d2bc30316318a",
+      "994597213": "cab14bb65c60be5ccb1193feb4f6394d075a60fe53a7d21a8b7f605d6e617e30",
+      "2491742368": "3b72af75279a8514a6bc64eb75db874355886277a8504e2e47da5c7e430e90c6"
+    },
+    "expected_comment_count": 5
+  }
+}

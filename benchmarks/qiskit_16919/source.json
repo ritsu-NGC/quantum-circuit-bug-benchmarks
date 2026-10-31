@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "repository": "Qiskit/qiskit",
+  "retrieved_at": "2026-10-30T17:28:03+00:00",
+  "issue": {
+    "number": 16919,
+    "title": "Qiskit generates invalid qasm3 for circuits with MCX/MCZ gates",
+    "html_url": "https://github.com/Qiskit/qiskit/issues/16919",
+    "body": "### Environment\n\n- **Qiskit version**:  2.5.2\n- **Python version**:  3.14.7\n- **Operating system**: macOS 26.6.2\n\n\n### What is happening?\n\nGiven a quantum circuit which has a multiply-controlled X (or multiply-controlled Z) gate with 5 or more controls, the qasm3 code generated is invalid. In particular the mcphase gate it defines includes an unused phase parameter, similar to https://github.com/Qiskit/qiskit/issues/13350. In this case however, this unused parameter is not included when calling the mcphase gate in the mcx/mcz definitions in QASM. This predictably results in an error if you attempt to then load the qasm file with qiskit (or anything else that parses qasm3 files). \n\n### How can we reproduce the issue?\n\nHere's a minimal example that will result in an exception \n\n```python\nfrom qiskit.circuit.library import MCMTGate, ZGate\nfrom qiskit import qasm3, QuantumCircuit\nimport qiskit\n\nnum_qubits = 6\nqc = QuantumCircuit(num_qubits)\nqc.mcx([0,1,2,3,4], 5)\n\nqasm_string = qasm3.dumps(qc)\n\nqasm3.loads(qasm_string)\n```\n\nThe qasm in ``qasm_string`` is given by\n\n```qasm\nOPENQASM 3.0;\ninclude \"stdgates.inc\";\ngate mcphase(_gate_p_0) _gate_q_0, _gate_q_1, _gate_q_2, _gate_q_3, _gate_q_4, _gate_q_5 {\n  h _gate_q_5;\n  p(pi/8) _gate_q_0;\n  p(pi/8) _gate_q_1;\n  p(pi/8) _gate_q_2;\n  p(pi/8) _gate_q_5;\n  cx _gate_q_0, _gate_q_1;\n  p(-pi/8) _gate_q_1;\n  cx _gate_q_0, _gate_q_1;\n  cx _gate_q_1, _gate_q_2;\n  p(-pi/8) _gate_q_2;\n  cx _gate_q_0, _gate_q_2;\n  p(pi/8) _gate_q_2;\n  cx _gate_q_1, _gate_q_2;\n  p(-pi/8) _gate_q_2;\n  cx _gate_q_0, _gate_q_2;\n  cx _gate_q_2, _gate_q_5;\n  p(-pi/8) _gate_q_5;\n  cx _gate_q_1, _gate_q_5;\n  p(pi/8) _gate_q_5;\n  cx _gate_q_2, _gate_q_5;\n  p(-pi/8) _gate_q_5;\n  cx _gate_q_0, _gate_q_5;\n  p(pi/8) _gate_q_5;\n  cx _gate_q_2, _gate_q_5;\n  p(-pi/8) _gate_q_5;\n  cx _gate_q_1, _gate_q_5;\n  p(pi/8) _gate_q_5;\n  cx _gate_q_2, _gate_q_5;\n  p(-pi/8) _gate_q_5;\n  cx _gate_q_0, _gate_q_5;\n  h _gate_q_5;\n  rz(-pi/4) _gate_q_5;\n  h _gate_q_5;\n  cx _gate_q_4, _gate_q_5;\n  tdg _gate_q_5;\n  cx _gate_q_3, _gate_q_5;\n  t _gate_q_5;\n  cx _gate_q_4, _gate_q_5;\n  tdg _gate_q_5;\n  cx _gate_q_3, _gate_q_5;\n  t _gate_q_4;\n  t _gate_q_5;\n  h _gate_q_5;\n  cx _gate_q_3, _gate_q_4;\n  t _gate_q_3;\n  tdg _gate_q_4;\n  cx _gate_q_3, _gate_q_4;\n  rz(pi/4) _gate_q_5;\n  h _gate_q_5;\n  p(pi/8) _gate_q_0;\n  p(pi/8) _gate_q_1;\n  p(pi/8) _gate_q_2;\n  p(pi/8) _gate_q_5;\n  cx _gate_q_0, _gate_q_1;\n  p(-pi/8) _gate_q_1;\n  cx _gate_q_0, _gate_q_1;\n  cx _gate_q_1, _gate_q_2;\n  p(-pi/8) _gate_q_2;\n  cx _gate_q_0, _gate_q_2;\n  p(pi/8) _gate_q_2;\n  cx _gate_q_1, _gate_q_2;\n  p(-pi/8) _gate_q_2;\n  cx _gate_q_0, _gate_q_2;\n  cx _gate_q_2, _gate_q_5;\n  p(-pi/8) _gate_q_5;\n  cx _gate_q_1, _gate_q_5;\n  p(pi/8) _gate_q_5;\n  cx _gate_q_2, _gate_q_5;\n  p(-pi/8) _gate_q_5;\n  cx _gate_q_0, _gate_q_5;\n  p(pi/8) _gate_q_5;\n  cx _gate_q_2, _gate_q_5;\n  p(-pi/8) _gate_q_5;\n  cx _gate_q_1, _gate_q_5;\n  p(pi/8) _gate_q_5;\n  cx _gate_q_2, _gate_q_5;\n  p(-pi/8) _gate_q_5;\n  cx _gate_q_0, _gate_q_5;\n  h _gate_q_5;\n  rz(-pi/4) _gate_q_5;\n  h _gate_q_5;\n  cx _gate_q_4, _gate_q_5;\n  tdg _gate_q_5;\n  cx _gate_q_3, _gate_q_5;\n  t _gate_q_5;\n  cx _gate_q_4, _gate_q_5;\n  tdg _gate_q_5;\n  cx _gate_q_3, _gate_q_5;\n  t _gate_q_4;\n  t _gate_q_5;\n  h _gate_q_5;\n  cx _gate_q_3, _gate_q_4;\n  t _gate_q_3;\n  tdg _gate_q_4;\n  cx _gate_q_3, _gate_q_4;\n  rz(pi/4) _gate_q_5;\n  h _gate_q_4;\n  cx _gate_q_1, _gate_q_4;\n  tdg _gate_q_4;\n  cx _gate_q_0, _gate_q_4;\n  t _gate_q_4;\n  cx _gate_q_1, _gate_q_4;\n  tdg _gate_q_4;\n  cx _gate_q_0, _gate_q_4;\n  t _gate_q_1;\n  t _gate_q_4;\n  h _gate_q_4;\n  cx _gate_q_0, _gate_q_1;\n  t _gate_q_0;\n  tdg _gate_q_1;\n  cx _gate_q_0, _gate_q_1;\n  rz(-pi/8) _gate_q_4;\n  h _gate_q_4;\n  cx _gate_q_3, _gate_q_4;\n  tdg _gate_q_4;\n  cx _gate_q_2, _gate_q_4;\n  t _gate_q_4;\n  cx _gate_q_3, _gate_q_4;\n  tdg _gate_q_4;\n  cx _gate_q_2, _gate_q_4;\n  t _gate_q_3;\n  t _gate_q_4;\n  h _gate_q_4;\n  cx _gate_q_2, _gate_q_3;\n  t _gate_q_2;\n  tdg _gate_q_3;\n  cx _gate_q_2, _gate_q_3;\n  rz(pi/8) _gate_q_4;\n  h _gate_q_4;\n  cx _gate_q_1, _gate_q_4;\n  tdg _gate_q_4;\n  cx _gate_q_0, _gate_q_4;\n  t _gate_q_4;\n  cx _gate_q_1, _gate_q_4;\n  tdg _gate_q_4;\n  cx _gate_q_0, _gate_q_4;\n  t _gate_q_1;\n  t _gate_q_4;\n  h _gate_q_4;\n  cx _gate_q_0, _gate_q_1;\n  t _gate_q_0;\n  tdg _gate_q_1;\n  cx _gate_q_0, _gate_q_1;\n  rz(-pi/8) _gate_q_4;\n  h _gate_q_4;\n  cx _gate_q_3, _gate_q_4;\n  tdg _gate_q_4;\n  cx _gate_q_2, _gate_q_4;\n  t _gate_q_4;\n  cx _gate_q_3, _gate_q_4;\n  tdg _gate_q_4;\n  cx _gate_q_2, _gate_q_4;\n  t _gate_q_3;\n  t _gate_q_4;\n  h _gate_q_4;\n  cx _gate_q_2, _gate_q_3;\n  t _gate_q_2;\n  tdg _gate_q_3;\n  cx _gate_q_2, _gate_q_3;\n  rz(pi/8) _gate_q_4;\n  h _gate_q_3;\n  cx _gate_q_1, _gate_q_3;\n  tdg _gate_q_3;\n  cx _gate_q_0, _gate_q_3;\n  t _gate_q_3;\n  cx _gate_q_1, _gate_q_3;\n  tdg _gate_q_3;\n  cx _gate_q_0, _gate_q_3;\n  t _gate_q_1;\n  t _gate_q_3;\n  h _gate_q_3;\n  cx _gate_q_0, _gate_q_1;\n  t _gate_q_0;\n  tdg _gate_q_1;\n  cx _gate_q_0, _gate_q_1;\n  rz(-pi/16) _gate_q_3;\n  cx _gate_q_2, _gate_q_3;\n  rz(pi/16) _gate_q_3;\n  h _gate_q_3;\n  cx _gate_q_1, _gate_q_3;\n  tdg _gate_q_3;\n  cx _gate_q_0, _gate_q_3;\n  t _gate_q_3;\n  cx _gate_q_1, _gate_q_3;\n  tdg _gate_q_3;\n  cx _gate_q_0, _gate_q_3;\n  t _gate_q_1;\n  t _gate_q_3;\n  h _gate_q_3;\n  cx _gate_q_0, _gate_q_1;\n  t _gate_q_0;\n  tdg _gate_q_1;\n  cx _gate_q_0, _gate_q_1;\n  rz(-pi/16) _gate_q_3;\n  cx _gate_q_2, _gate_q_3;\n  rz(pi/16) _gate_q_3;\n  cx _gate_q_0, _gate_q_2;\n  rz(-pi/32) _gate_q_2;\n  cx _gate_q_1, _gate_q_2;\n  rz(pi/32) _gate_q_2;\n  cx _gate_q_0, _gate_q_2;\n  rz(-pi/32) _gate_q_2;\n  cx _gate_q_1, _gate_q_2;\n  rz(pi/32) _gate_q_2;\n  crz(pi/16) _gate_q_0, _gate_q_1;\n  p(pi/32) _gate_q_0;\n}\ngate mcx _gate_q_0, _gate_q_1, _gate_q_2, _gate_q_3, _gate_q_4, _gate_q_5 {\n  h _gate_q_5;\n  mcphase _gate_q_0, _gate_q_1, _gate_q_2, _gate_q_3, _gate_q_4, _gate_q_5;\n  h _gate_q_5;\n}\nqubit[6] q;\nmcx q[0], q[1], q[2], q[3], q[4], q[5];\n```\n \n\n### What should happen?\n\nThe mcphase gate definition should not include an angle parameter when no such parameter is used in the definition. At the very least the qasm generated by qiskit.qasm3.dump should be correct enough to be parseable.",
+    "state": "closed",
+    "state_reason": "completed",
+    "created_at": "2026-09-03T06:40:00Z",
+    "updated_at": "2026-09-04T01:09:37Z",
+    "closed_at": "2026-09-04T01:09:37Z",
+    "author": "cnakhl"
+  },
+  "comments": [
+    {
+      "id": 5524384032,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/16919#issuecomment-5524384032",
+      "body": "# Proposal: Fix QASM3 Export of Parameterized Controlled Gates\n\nThe QASM3 exporter currently generates invalid QASM3 for `MCXGate` with 5 or more controls. Its decomposition contains an `MCPhaseGate` whose definition expects a parameter, but the generated gate call omits it.\n\n### Root Cause\n\nIn `qiskit/qasm3/exporter.py`, `build_gate_call()` uses `instruction.params` to build the gate-call parameters. For the affected decomposed operation:\n\n```text\noperation.params = [pi]\ninstruction.params = []\n```\n\nThis causes the generated `mcphase` call to have zero parameters despite its definition requiring one.\n\n### Proposed Fix\n\nChange:\n\n```python\nparameters = self._build_quantum_call_parameters(instruction.params)\n```\n\nto:\n\n```python\nparameters = self._build_quantum_call_parameters(operation.params)\n```\n\nThis ensures the gate call uses the parameters of the actual operation being exported.\n\n### Validation\n\nThe existing Qiskit QASM3 test suites pass:\n\n```text\ntest.python.qasm3.test_export\nRan 118 tests — OK\n\ntest.python.qasm3.test_import\nRan 18 tests — OK\n```\n\nThe original issue reproducer also now successfully exports and re-imports the generated QASM3.\n\nThe change is minimal and isolated to `build_gate_call()`.\n\n**If this approach looks good, could you please assign this issue to me? I would like to proceed with creating the PR.**\n",
+      "created_at": "2026-09-03T10:34:24Z",
+      "updated_at": "2026-09-03T10:34:24Z",
+      "author": "GauravSinghgit"
+    },
+    {
+      "id": 5525028925,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/16919#issuecomment-5525028925",
+      "body": "I think that perhaps this PR may fix it? https://github.com/Qiskit/qiskit/pull/16781\nIf so, this was fixed in both the main and stable branches. Could you please check it?",
+      "created_at": "2026-09-03T11:29:42Z",
+      "updated_at": "2026-09-03T11:29:42Z",
+      "author": "ShellyGarion"
+    },
+    {
+      "id": 5534225404,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/16919#issuecomment-5534225404",
+      "body": "Yes that indeed fixes the problem, thanks!",
+      "created_at": "2026-09-04T01:09:29Z",
+      "updated_at": "2026-09-04T01:09:29Z",
+      "author": "cnakhl"
+    }
+  ],
+  "state_events": [
+    {
+      "event": "closed",
+      "created_at": "2026-09-04T01:09:37Z",
+      "commit_id": null,
+      "commit_url": null,
+      "actor": "cnakhl"
+    }
+  ],
+  "integrity": {
+    "body_sha256": "b405e769e66ec1351e57a08035bda2985ea250c1726a1d9d46a5cdde360c9f3b",
+    "comment_body_sha256": {
+      "5524384032": "813956162ad4a883d695822c7b77654927786b39303a29984bf811bc399fd4b1",
+      "5525028925": "c4d32f5db4973ad3c679466deffe4e7249d451f16833b80545f7232e5006704e",
+      "5534225404": "22cfbf5ee6f5b8465dd87ec5c8b6e9cdeed55139ce0ae59e385c6da3c7ab9876"
+    },
+    "expected_comment_count": 3
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "repository": "Qiskit/qiskit",
+  "retrieved_at": "2026-10-30T17:28:03+00:00",
+  "issue": {
+    "number": 16161,
+    "title": "CommutativeOptimization silently corrupts direction-sensitive XXPlusYYGate by incorrectly treating it as a symmetric gate",
+    "html_url": "https://github.com/Qiskit/qiskit/issues/16161",
+    "body": "### Environment\n\n- **Qiskit version**: 2.4.1\n- **Python version**: 3.13.13\n- **Operating system**: macOS\n\n\n### What is happening?\n\nIn the transpiler source code, StandardGate::XXPlusYY is erroneously hardcoded into the SYMMETRIC_GATES list. Because of this misclassification, CommutativeOptimization ignores the qubit order for this gate.\n\nXXPlusYYGate(theta, beta) is actually a direction-sensitive operation whenever beta != 0 and beta != pi. Its action on the qubit order [0, 1] is mathematically distinct from its action on [1, 0].\n\nIf a user constructs a circuit with a forward rotation on [0, 1] followed by an inverse rotation on [1, 0], the optimizer incorrectly treats them as identical inverse operations on the same wire order. It then erroneously cancels and deletes both gates. This leads to a silent correctness error where a non-trivial two-qubit operation is wrongly optimized into an identity operation, altering the mathematical semantics of the circuit.\n\n### How can we reproduce the issue?\n\nimport numpy as np\nimport qiskit\nfrom qiskit import QuantumCircuit\nfrom qiskit.circuit.library import XXPlusYYGate\nfrom qiskit.quantum_info import Statevector\nfrom qiskit.transpiler import PassManager\nfrom qiskit.transpiler.passes import CommutativeOptimization\n\ntheta = np.pi / 2\nbeta = np.pi / 3\nxy = XXPlusYYGate(theta, beta)\n\nqc = QuantumCircuit(2)\nqc.append(xy, [0, 1])\nqc.append(xy.power(-1), [1, 0])  \n\nqc_opt = PassManager([CommutativeOptimization()]).run(qc)\n\ninitial_state = Statevector.from_label(\"01\")\nstate_before = initial_state.evolve(qc)\nstate_after = initial_state.evolve(qc_opt)\n\n\nprint(\"Probabilities before:\", state_before.probabilities_dict())\nprint(\"Probabilities after:\", state_after.probabilities_dict())\n\n\n### What should happen?\n\nThe transpiler must not alter the circuit semantics. CommutativeOptimization should recognize that XXPlusYYGate on [0, 1] and its inverse on [1, 0] are not mathematically equivalent operations that cancel each other out. The optimizer should leave the two XXPlusYYGate instances intact. The optimized circuit must remain mathematically equivalent to the original circuit and produce the identical probability distribution.\n\n### Any suggestions?\n\nThe most direct fix is to remove StandardGate::XXPlusYY from the SYMMETRIC_GATES list in crates/transpiler/src/passes/commutative_optimization.rs (around line 79).\n\nIf optimization for special cases is desired, the logic must be updated to dynamically check the beta parameter and only treat the gate as symmetric when it is explicitly known that beta = 0 or beta = pi. By default, it must not be treated as a qubit permutation invariant gate.",
+    "state": "closed",
+    "state_reason": "completed",
+    "created_at": "2026-05-09T08:04:05Z",
+    "updated_at": "2026-05-18T10:12:04Z",
+    "closed_at": "2026-05-18T10:12:04Z",
+    "author": "Timeless-hep"
+  },
+  "comments": [
+    {
+      "id": 4414529503,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/16161#issuecomment-4414529503",
+      "body": "Thank you for the report, @YujinSong-hep. I have pushed a fix in #16163.",
+      "created_at": "2026-05-10T05:32:00Z",
+      "updated_at": "2026-05-10T05:32:00Z",
+      "author": "alexanderivrii"
+    }
+  ],
+  "state_events": [
+    {
+      "event": "closed",
+      "created_at": "2026-05-18T10:12:04Z",
+      "commit_id": null,
+      "commit_url": null,
+      "actor": "alexanderivrii"
+    }
+  ],
+  "integrity": {
+    "body_sha256": "d4e232ea5d7360212727cf0cd648641e2fce708313ba51cdf76b80a067e57064",
+    "comment_body_sha256": {
+      "4414529503": "d3d29a9a3ccdea7e599bfc3e143c2ec107040ceacae8c4f84afac6f4a19e1ee6"
+    },
+    "expected_comment_count": 1
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "repository": "Qiskit/qiskit",
+  "retrieved_at": "2026-10-30T17:28:03+00:00",
+  "issue": {
+    "number": 5666,
+    "title": "classical_function creates wrong circuits for some cases",
+    "html_url": "https://github.com/Qiskit/qiskit/issues/5666",
+    "body": "### Information\r\n\r\n- **Qiskit Terra version**: master\r\n- **Python version**: 3.8\r\n- **Operating system**: macOS Catalina\r\n\r\n### What is the current behavior?\r\n`classical_function` creates wrong circuits for some cases. I confirmed at least two cases. \r\n\r\n### Steps to reproduce the problem\r\nCase 1) \r\n```\r\ndef expr1(x1: Int1, x2: Int1, x3: Int1) -> Int1:\r\n    return x1\r\n\r\ncf = classical_function(expr1)\r\nprint(cf.synth())\r\n\r\nq_0: ──■──\r\n       │  \r\nq_1: ──┼──\r\n       │  \r\nq_2: ──┼──\r\n     ┌─┴─┐\r\nq_3: ┤ X ├\r\n     └───┘\r\n```\r\n\r\nCase 2)\r\n```\r\ndef expr2(x1: Int1, x2: Int1, x3: Int1) -> Int1:\r\n    return x1 or x2 or x3\r\n\r\ncf = classical_function(expr2)\r\nprint(cf.synth())\r\n\r\nq_0: ──o────────────\r\n       │            \r\nq_1: ──o────o───────\r\n       │    │       \r\nq_2: ──■────■────■──\r\n     ┌─┴─┐┌─┴─┐┌─┴─┐\r\nq_3: ┤ X ├┤ X ├┤ X ├\r\n     └───┘└───┘└───┘\r\n```\r\n### What is the expected behavior?\r\nCase 1)\r\nThe control bit of the CNOT gate should be the most bottom bit. \r\n\r\nAs written in the [documentation](https://qiskit.org/documentation/apidoc/classicalfunction.html), following Qiskit’s little-endian bit ordering convention, the left-most bit (x1) is the most significant bit and the right-most bit (x3) is the least significant bit. \r\nThe following code is an example for the correct bit ordering.\r\n```\r\ndef expr3(x1: Int1, x2: Int1, x3: Int1) -> Int1:\r\n    return not x1 and x2 and x3\r\n\r\ncf = classical_function(expr3)\r\nprint(cf.synth())\r\n\r\nq_0: ──■──\r\n       │  \r\nq_1: ──■──\r\n       │  \r\nq_2: ──o──\r\n     ┌─┴─┐\r\nq_3: ┤ X ├\r\n     └───┘\r\n```\r\n\r\nCase 2)\r\nThe circuit does not represent `x1 or x2 or x3`. For example, when (x1, x2, x3) = (001), $q_3$ of the circuit does not become 1.\r\n\r\n### Suggested solutions\r\n\r\n",
+    "state": "closed",
+    "state_reason": "completed",
+    "created_at": "2021-01-21T13:17:51Z",
+    "updated_at": "2021-03-31T18:11:32Z",
+    "closed_at": "2021-03-31T18:11:32Z",
+    "author": "a-matsuo"
+  },
+  "comments": [
+    {
+      "id": 784192665,
+      "html_url": "https://github.com/Qiskit/qiskit/issues/5666#issuecomment-784192665",
+      "body": "Case 1 is not a bug.\r\n\r\nIndeed, Qiskit's follows little-endian bit ordering convention but this happens __within__ a register, i.e., there will be a difference of between declaring two 1 qubit registers and a register of 2 qubits.  Hence, if you had declared a the function as\r\n```python\r\ndef expr1(x: Int3) -> Int1:\r\n    ...\r\n```\r\nthen you would get `x` as a register of three bits following the little-endian bit ordering.\r\n\r\nCase 2 will be fixed by #5830 \r\n",
+      "created_at": "2021-02-23T13:12:01Z",
+      "updated_at": "2021-02-23T13:12:01Z",
+      "author": "boschmitt"
+    }
+  ],
+  "state_events": [
+    {
+      "event": "closed",
+      "created_at": "2021-03-31T18:11:32Z",
+      "commit_id": null,
+      "commit_url": null,
+      "actor": "mergify[bot]"
+    }
+  ],
+  "integrity": {
+    "body_sha256": "70d92ded6a470161ef6c30fa22c1af6a51511a22d762b9b31fdd34b9028da4a8",
+    "comment_body_sha256": {
+      "784192665": "a93f3634e11a11bda329f8a81a91a0c4c59aa35f7a91ab0347e2b5c115d6366c"
+    },
+    "expected_comment_count": 1
+  }
+}
