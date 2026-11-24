@@ -10,6 +10,7 @@ from qiskit.transpiler.passes.routing.commuting_2q_gate_routing import (
     SwapStrategy,
 )
 
+# Operator containing duplicate Pauli terms: 0.2 * ZZ + 0.4 * ZZ = 0.6 * ZZ
 operator = SparsePauliOp(
     ["ZZ", "ZZ"],
     coeffs=[0.2, 0.4],
@@ -21,6 +22,7 @@ source.append(
     [0, 1],
 )
 
+# Run FindCommutingPauliEvolutions
 after_find = PassManager(
     [
         FindCommutingPauliEvolutions(),
@@ -28,7 +30,6 @@ after_find = PassManager(
 ).run(source)
 
 block_operation = after_find.data[0].operation
-
 block_times = sorted(
     float(node.op.time)
     for node in block_operation
@@ -37,6 +38,7 @@ block_times = sorted(
 print("operation after Find:", block_operation.name)
 print("times stored in block:", block_times)
 
+# Run the full routing pipeline
 routed = PassManager(
     [
         FindCommutingPauliEvolutions(),
@@ -54,22 +56,16 @@ routed_times = sorted(
 
 print("times after routing:", routed_times)
 
+# Expected combined circuit: exp(-i * 0.6 * ZZ)
 combined = QuantumCircuit(2)
 combined.append(
     PauliEvolutionGate(Pauli("ZZ"), time=0.6),
     [0, 1],
 )
 
-only_last = QuantumCircuit(2)
-only_last.append(
-    PauliEvolutionGate(Pauli("ZZ"), time=0.4),
-    [0, 1],
-)
-
 source_operator = Operator(source)
 routed_operator = Operator(routed)
 combined_operator = Operator(combined)
-only_last_operator = Operator(only_last)
 
 print(
     "input equivalent to combined 0.6 evolution:",
@@ -78,10 +74,6 @@ print(
 print(
     "routed circuit equivalent to input:",
     routed_operator.equiv(source_operator),
-)
-print(
-    "routed circuit equivalent to only the 0.4 term:",
-    routed_operator.equiv(only_last_operator),
 )
 print(
     "maximum matrix difference from input:",
